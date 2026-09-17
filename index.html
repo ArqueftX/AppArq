@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AppArq — Lecteur Markdown</title>
+<meta name="description" content="Lecteur de fichiers Markdown (.md) qui fonctionne hors connexion, installable sur Android.">
+<meta name="theme-color" content="#4f7cff">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div id="progress" aria-hidden="true"></div>
+
+<header class="appbar">
+  <h1 class="brand" id="doc-title">AppArq</h1>
+  <div class="actions">
+    <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier Markdown" title="Ouvrir un fichier">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    </button>
+    <button id="btn-smaller" class="icon-btn" aria-label="Réduire la taille du texte" title="Texte plus petit">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A-</text></svg>
+    </button>
+    <button id="btn-bigger" class="icon-btn" aria-label="Augmenter la taille du texte" title="Texte plus grand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A+</text></svg>
+    </button>
+    <button id="btn-theme" class="icon-btn" aria-label="Changer le thème" title="Thème">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section id="welcome" class="welcome">
+    <img src="./icons/icon-192.png" alt="" class="hero-icon" width="88" height="88">
+    <h2>Lis tes fichiers Markdown</h2>
+    <p class="lead">Choisis un fichier <code>.md</code> sur ton téléphone, il s'affiche mis en forme. Tout se passe sur ton appareil : rien n'est envoyé sur Internet.</p>
+    <button id="btn-open-big" class="primary-btn">Ouvrir un fichier .md</button>
+    <div class="tips">
+      <p><strong>Astuce :</strong> depuis ton gestionnaire de fichiers, appuie longuement sur un <code>.md</code> → <em>Partager</em> → <strong>AppArq</strong>.</p>
+      <p id="install-hint" hidden>Pour l'installer : menu <strong>⋮</strong> de Chrome → <em>Ajouter à l'écran d'accueil</em>.</p>
+    </div>
+  </section>
+
+  <article id="doc" class="markdown" hidden></article>
+</main>
+
+<input type="file" id="file-input" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" hidden>
+
+<button id="to-top" class="to-top" aria-label="Revenir en haut" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 7h-4v7h-6v-7H5z"/></svg>
+</button>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="./vendor/marked.umd.js"></script>
+<script src="./vendor/purify.min.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
