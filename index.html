@@ -9,22 +9,25 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=2">
+<link rel="stylesheet" href="./style.css?v=3">
 </head>
-<body>
+<body data-vue="accueil">
 
 <div id="progress" aria-hidden="true"></div>
 
 <header class="appbar">
+  <button id="btn-home" class="icon-btn" aria-label="Revenir à l'accueil" title="Accueil">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+  </button>
   <h1 class="brand" id="doc-title">AppArq</h1>
   <div class="actions">
     <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier Markdown" title="Ouvrir un fichier">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
     </button>
-    <button id="btn-smaller" class="icon-btn" aria-label="Réduire la taille du texte" title="Texte plus petit">
+    <button id="btn-smaller" class="icon-btn reglage-texte" aria-label="Réduire la taille du texte" title="Texte plus petit">
       <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A-</text></svg>
     </button>
-    <button id="btn-bigger" class="icon-btn" aria-label="Augmenter la taille du texte" title="Texte plus grand">
+    <button id="btn-bigger" class="icon-btn reglage-texte" aria-label="Augmenter la taille du texte" title="Texte plus grand">
       <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A+</text></svg>
     </button>
     <button id="btn-theme" class="icon-btn" aria-label="Changer le thème" title="Thème">
@@ -34,18 +37,49 @@
 </header>
 
 <main id="main">
-  <section id="welcome" class="welcome">
-    <img src="./icons/icon-192.png" alt="" class="hero-icon" width="88" height="88">
-    <h2>Lis tes fichiers Markdown</h2>
-    <p class="lead">Choisis un fichier <code>.md</code> sur ton téléphone, il s'affiche mis en forme. Tout se passe sur ton appareil : rien n'est envoyé sur Internet.</p>
-    <button id="btn-open-big" class="primary-btn">Ouvrir un fichier .md</button>
-    <div class="tips">
-      <p><strong>Astuce :</strong> depuis ton gestionnaire de fichiers, appuie longuement sur un <code>.md</code> → <em>Partager</em> → <strong>AppArq</strong>.</p>
-      <p id="install-hint" hidden>Pour l'installer : menu <strong>⋮</strong> de Chrome → <em>Ajouter à l'écran d'accueil</em>.</p>
+
+  <!-- ===================== PAGE D'ACCUEIL ===================== -->
+  <section id="accueil" class="accueil">
+
+    <div class="hero">
+      <img src="./icons/icon-512.png" alt="" class="logo" width="104" height="104">
+      <h2 class="titre-app">AppArq</h2>
+      <p class="baseline">Tes fichiers Markdown, bien mis en forme.<br>Tout reste sur ton téléphone.</p>
     </div>
+
+    <button id="carte-reprise" class="carte carte-action" hidden>
+      <span class="carte-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </span>
+      <span class="carte-texte">
+        <span class="carte-titre">Reprendre la lecture</span>
+        <span class="carte-detail" id="reprise-nom"></span>
+      </span>
+    </button>
+
+    <button id="btn-open-big" class="primary-btn">Ouvrir un fichier .md</button>
+
+    <ul class="aide">
+      <li>
+        <span class="aide-num">1</span>
+        <span>Appuie sur <strong>Ouvrir un fichier .md</strong> et choisis un fichier sur ton téléphone.</span>
+      </li>
+      <li>
+        <span class="aide-num">2</span>
+        <span>Ou, depuis ton gestionnaire de fichiers : appui long sur un <code>.md</code> → <em>Partager</em> → <strong>AppArq</strong>.</span>
+      </li>
+      <li id="aide-installer" hidden>
+        <span class="aide-num">3</span>
+        <span>Pour l'installer sur l'écran d'accueil : menu <strong>⋮</strong> de Chrome → <em>Ajouter à l'écran d'accueil</em>.</span>
+      </li>
+    </ul>
+
+    <p class="pied">Aucun fichier n'est envoyé sur Internet. L'application fonctionne hors connexion.</p>
   </section>
 
-  <article id="doc" class="markdown" hidden></article>
+  <!-- ===================== DOCUMENT AFFICHÉ ===================== -->
+  <article id="doc" class="markdown"></article>
+
 </main>
 
 <input type="file" id="file-input" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" hidden>
@@ -58,6 +92,6 @@
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
-<script src="./app.js?v=2"></script>
+<script src="./app.js?v=3"></script>
 </body>
 </html>

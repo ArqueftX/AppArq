@@ -31,8 +31,13 @@ transmet **aucun fichier sur Internet** : tout est lu sur ton appareil.
 
 ## 2. Comment s'en servir
 
+L'application s'ouvre sur sa **page d'accueil** : le logo, un bouton pour ouvrir un
+fichier, et une carte **Reprendre la lecture** qui rouvre le dernier document lu.
+
 **Ouvrir un fichier** : appuie sur *Ouvrir un fichier .md* (ou l'icône dossier en haut),
 puis choisis ton fichier dans la fenêtre Android.
+
+**Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour* d'Android.
 
 **Depuis ton gestionnaire de fichiers** : appui long sur un fichier `.md` →
 **Partager** → **AppArq**. Le document s'ouvre directement.
@@ -41,11 +46,12 @@ puis choisis ton fichier dans la fenêtre Android.
 
 | Bouton | Effet |
 | --- | --- |
+| ← | Revenir à la page d'accueil (visible pendant la lecture) |
 | 📁 | Ouvrir un autre fichier |
 | A− / A+ | Réduire ou agrandir le texte (mémorisé) |
 | 🌗 | Basculer entre thème automatique, clair et sombre |
 
-Le dernier document lu est réaffiché automatiquement à la réouverture de l'app.
+Le dernier document lu reste proposé sur l'accueil, même après avoir fermé l'application.
 
 ### Ce que l'application sait afficher
 
@@ -59,7 +65,7 @@ Markdown standard (GitHub Flavored Markdown).
 
 | Fichier | À quoi il sert |
 | --- | --- |
-| `index.html` | La structure de la page (les boutons, les zones de texte) |
+| `index.html` | La structure des deux écrans : l'accueil et le document |
 | `style.css` | L'apparence : couleurs, tailles, espacements |
 | `app.js` | Le fonctionnement : ouvrir un fichier, l'afficher, les réglages |
 | `sw.js` | Le *service worker* : mode hors connexion + réception des fichiers partagés |
@@ -93,11 +99,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=2` → `style.css?v=3` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v2';` → `'v3'`.
+> 1. dans `index.html` : `style.css?v=3` → `style.css?v=4` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v3';` → `'v4'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=3` est une adresse qu'il n'a jamais vue.
+> `style.css?v=4` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
@@ -113,7 +119,7 @@ puis ouvre `http://localhost:8000` dans un navigateur.
 
 ## 5. Idées pour la suite
 
-- Une bibliothèque de documents (garder plusieurs fichiers dans l'app)
+- Une bibliothèque de documents sur l'accueil (garder plusieurs fichiers, pas seulement le dernier)
 - Un sommaire cliquable pour les longs documents
 - Une recherche dans le document
 - Un mode édition, pour écrire du Markdown et pas seulement le lire

@@ -1,22 +1,24 @@
 /* ---------------------------------------------------------------
    AppArq — logique de l'application
-   Tout tient dans ce fichier. Il est commente pour etre lisible
-   meme quand on debute.
+   L'application a deux ecrans :
+     - l'accueil (data-vue="accueil" sur <body>)
+     - le document affiche (data-vue="doc")
+   Tout tient dans ce fichier, commente pour rester lisible.
    --------------------------------------------------------------- */
 
 (function () {
   'use strict';
 
-  // Raccourci : $('#id') renvoie l'element correspondant.
   var $ = function (sel) { return document.querySelector(sel); };
 
   var elDoc      = $('#doc');
-  var elWelcome  = $('#welcome');
   var elTitle    = $('#doc-title');
   var elInput    = $('#file-input');
   var elProgress = $('#progress');
   var elToTop    = $('#to-top');
   var elToast    = $('#toast');
+  var elReprise  = $('#carte-reprise');
+  var elRepriseN = $('#reprise-nom');
 
   var STORE = {
     last:  'apparq:dernier-document',
@@ -45,7 +47,45 @@
   }
 
   /* ----------------------------------------------------------- */
-  /* 1. Affichage du Markdown                                    */
+  /* 1. Passer d'un ecran a l'autre                              */
+  /* ----------------------------------------------------------- */
+
+  function vueActuelle() { return document.body.dataset.vue; }
+
+  function allerAccueil() {
+    document.body.dataset.vue = 'accueil';
+    elTitle.textContent = 'AppArq';
+    document.title = 'AppArq — Lecteur Markdown';
+    majCarteReprise();
+    window.scrollTo(0, 0);
+    majProgression();
+  }
+
+  // Affiche la carte "Reprendre la lecture" si un document a deja ete lu.
+  function majCarteReprise() {
+    var d = dernierDocument();
+    if (d) {
+      elRepriseN.textContent = d.nom || 'Document';
+      elReprise.hidden = false;
+    } else {
+      elReprise.hidden = true;
+    }
+  }
+
+  function dernierDocument() {
+    var brut = lire(STORE.last);
+    if (!brut) return null;
+    try {
+      var d = JSON.parse(brut);
+      return (d && typeof d.texte === 'string') ? d : null;
+    } catch (e) {
+      effacer(STORE.last);
+      return null;
+    }
+  }
+
+  /* ----------------------------------------------------------- */
+  /* 2. Affichage du Markdown                                    */
   /* ----------------------------------------------------------- */
 
   marked.use({ gfm: true, breaks: false });
@@ -77,15 +117,20 @@
       wrap.appendChild(table);
     });
 
-    elDoc.hidden = false;
-    elWelcome.hidden = true;
+    // On empile une etape d'historique : le bouton Retour d'Android
+    // ramene alors a l'accueil au lieu de fermer l'application.
+    if (vueActuelle() !== 'doc') {
+      history.pushState({ vue: 'doc' }, '');
+    }
+
+    document.body.dataset.vue = 'doc';
     elTitle.textContent = nomFichier || 'Document';
     document.title = (nomFichier || 'Document') + ' — AppArq';
     window.scrollTo(0, 0);
     majProgression();
   }
 
-  // Memorise le document pour le retrouver a la prochaine ouverture.
+  // Memorise le document pour pouvoir le reprendre depuis l'accueil.
   function memoriser(texte, nom) {
     if (texte.length > 1500000) return;           // trop gros : on ne stocke pas
     ecrire(STORE.last, JSON.stringify({ nom: nom, texte: texte }));
@@ -112,7 +157,7 @@
   }
 
   /* ----------------------------------------------------------- */
-  /* 2. Boutons                                                  */
+  /* 3. Boutons                                                  */
   /* ----------------------------------------------------------- */
 
   function choisirFichier() { elInput.click(); }
@@ -123,6 +168,24 @@
   elInput.addEventListener('change', function () {
     ouvrirFichier(elInput.files && elInput.files[0]);
     elInput.value = '';        // permet de rouvrir deux fois le meme fichier
+  });
+
+  // Carte "Reprendre la lecture"
+  elReprise.addEventListener('click', function () {
+    var d = dernierDocument();
+    if (d) afficher(d.texte, d.nom);
+  });
+
+  // Fleche retour de la barre du haut
+  $('#btn-home').addEventListener('click', function () {
+    if (history.state && history.state.vue === 'doc') history.back();
+    else allerAccueil();
+  });
+
+  // Bouton Retour d'Android (et retour arriere du navigateur)
+  window.addEventListener('popstate', function (e) {
+    if (e.state && e.state.vue === 'doc') document.body.dataset.vue = 'doc';
+    else allerAccueil();
   });
 
   // Taille du texte (de 14 a 26 pixels).
@@ -152,14 +215,15 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 3. Confort de lecture                                       */
+  /* 4. Confort de lecture                                       */
   /* ----------------------------------------------------------- */
 
   function majProgression() {
+    var enLecture = vueActuelle() === 'doc';
     var hauteur = document.documentElement.scrollHeight - window.innerHeight;
-    var ratio = hauteur > 0 ? window.scrollY / hauteur : 0;
+    var ratio = (enLecture && hauteur > 0) ? window.scrollY / hauteur : 0;
     elProgress.style.width = (ratio * 100).toFixed(1) + '%';
-    elToTop.hidden = elDoc.hidden || window.scrollY < 600;
+    elToTop.hidden = !enLecture || window.scrollY < 600;
   }
   window.addEventListener('scroll', majProgression, { passive: true });
   window.addEventListener('resize', majProgression);
@@ -186,7 +250,7 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 4. Fichier recu par "Partager" depuis Android               */
+  /* 5. Fichier recu par "Partager" depuis Android               */
   /* ----------------------------------------------------------- */
 
   function recupererPartage() {
@@ -197,8 +261,8 @@
         if (!reponse) return false;
         return reponse.json().then(function (donnees) {
           cache.delete(cle);
-          afficher(donnees.texte, donnees.nom);
           memoriser(donnees.texte, donnees.nom);
+          afficher(donnees.texte, donnees.nom);
           return true;
         });
       });
@@ -206,7 +270,7 @@
   }
 
   /* ----------------------------------------------------------- */
-  /* 5. Demarrage                                                */
+  /* 6. Demarrage                                                */
   /* ----------------------------------------------------------- */
 
   function demarrer() {
@@ -215,34 +279,29 @@
     if (vientDuPartage) {
       history.replaceState(null, '', location.pathname);   // nettoie l'adresse
     }
+    history.replaceState({ vue: 'accueil' }, '');
 
+    // On commence toujours par l'accueil...
+    allerAccueil();
+
+    // ...sauf si un fichier vient d'etre partage depuis une autre application.
     recupererPartage().then(function (ok) {
-      if (ok) return;
-      if (vientDuPartage) {
+      if (!ok && vientDuPartage) {
         toast("Le fichier partagé n'a pas pu être récupéré.");
-      }
-      // Sinon : on rouvre le dernier document lu.
-      var brut = lire(STORE.last);
-      if (!brut) return;
-      try {
-        var d = JSON.parse(brut);
-        if (d && typeof d.texte === 'string') afficher(d.texte, d.nom);
-      } catch (e) {
-        effacer(STORE.last);
       }
     });
   }
 
   demarrer();
 
-  // Petit rappel d'installation, uniquement si l'app tourne dans le navigateur.
+  // L'etape 3 de l'aide ne sert que tant que l'app n'est pas installee.
   if (!window.matchMedia('(display-mode: standalone)').matches) {
-    var hint = $('#install-hint');
-    if (hint) hint.hidden = false;
+    var aide = $('#aide-installer');
+    if (aide) aide.hidden = false;
   }
 
   /* ----------------------------------------------------------- */
-  /* 6. Service worker (fonctionnement hors connexion)           */
+  /* 7. Service worker (fonctionnement hors connexion)           */
   /* ----------------------------------------------------------- */
 
   if ('serviceWorker' in navigator) {

@@ -109,22 +109,83 @@ body {
 .icon-btn:active { transform: scale(.94); }
 .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
 
-/* ----- ecran d'accueil ----- */
+/* ----- bascule entre les deux vues ----- */
+body[data-vue="accueil"] #doc,
+body[data-vue="doc"] #accueil { display: none; }
+body[data-vue="accueil"] #btn-home,
+body[data-vue="accueil"] .reglage-texte { display: none; }
+
+/* ----- page d'accueil ----- */
 main {
   max-width: 44rem;
   margin: 0 auto;
   padding: 20px 16px calc(48px + env(safe-area-inset-bottom));
 }
 
-.welcome { text-align: center; padding-top: 6vh; }
-.hero-icon { border-radius: 20px; box-shadow: var(--shadow); }
-.welcome h2 { margin: 18px 0 6px; font-size: 23px; }
-.lead { color: var(--muted); margin: 0 auto 22px; max-width: 34rem; }
+.accueil { text-align: center; }
+
+.hero { padding: 5vh 0 26px; }
+.logo {
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.titre-app {
+  margin: 16px 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.baseline {
+  margin: 0 auto;
+  max-width: 28rem;
+  color: var(--muted);
+  font-size: 15.5px;
+}
+
+/* carte "Reprendre la lecture" */
+.carte {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 13px 15px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.carte-action:active { transform: scale(.99); }
+.carte[hidden] { display: none; }
+
+.carte-icone {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.carte-icone svg { width: 20px; height: 20px; fill: #fff; margin-left: 2px; }
+
+.carte-texte { min-width: 0; display: flex; flex-direction: column; }
+.carte-titre { font-size: 13px; color: var(--muted); }
+.carte-detail {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .primary-btn {
+  width: 100%;
   border: 0;
-  border-radius: 999px;
-  padding: 14px 26px;
+  border-radius: var(--radius);
+  padding: 15px 22px;
   font-size: 16px;
   font-weight: 600;
   color: #fff;
@@ -132,19 +193,43 @@ main {
   box-shadow: var(--shadow);
   cursor: pointer;
 }
-.primary-btn:active { transform: scale(.97); }
+.primary-btn:active { transform: scale(.99); }
 
-.tips {
-  margin-top: 28px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 14px;
-  color: var(--muted);
+/* les 3 explications numerotees */
+.aide {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
   text-align: left;
 }
-.tips p { margin: 6px 0; }
+.aide li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 11px 2px;
+  font-size: 14.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.aide li[hidden] { display: none; }
+.aide-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 23px; height: 23px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.aide strong { color: var(--text); }
+
+.pied {
+  margin: 26px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
 
 /* ----- rendu du Markdown ----- */
 .markdown { font-size: var(--reading-size); }
@@ -216,7 +301,7 @@ main {
   z-index: 15;
 }
 .to-top svg { width: 22px; height: 22px; fill: currentColor; }
-.to-top[hidden] { display: none; }
+.to-top[hidden], body[data-vue="accueil"] .to-top { display: none; }
 
 /* ----- petit message temporaire ----- */
 .toast {
