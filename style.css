@@ -4,15 +4,16 @@
    --------------------------------------------------------------- */
 
 :root {
-  --accent: #4f7cff;
+  --accent: #7c3aed;        /* violet des boutons */
+  --link:   #6d28d9;        /* violet des liens (sur fond clair) */
   --bg: #ffffff;
-  --surface: #f6f7fb;
-  --surface-2: #eceef6;
-  --text: #1b1f27;
-  --muted: #5d6577;
-  --border: #dfe3ee;
-  --code-bg: #f3f4f9;
-  --shadow: 0 2px 12px rgba(20, 26, 48, .10);
+  --surface: #f7f5fd;
+  --surface-2: #ece8f8;
+  --text: #1b1a22;
+  --muted: #615c73;
+  --border: #e3ddf2;
+  --code-bg: #f5f2fd;
+  --shadow: 0 2px 12px rgba(40, 20, 80, .12);
   --reading-size: 17px;
   --radius: 14px;
 }
@@ -20,26 +21,28 @@
 /* Theme sombre : automatique selon le reglage du telephone... */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1115;
-    --surface: #171a21;
-    --surface-2: #222733;
-    --text: #e6e8ee;
-    --muted: #9aa3b6;
-    --border: #2a3040;
-    --code-bg: #171b24;
-    --shadow: 0 2px 12px rgba(0, 0, 0, .45);
+    --bg: #0d0b12;
+    --surface: #16131f;
+    --surface-2: #221c30;
+    --text: #e8e6f0;
+    --muted: #9b93b5;
+    --border: #2b2440;
+    --code-bg: #15121d;
+    --link: #b79cff;
+    --shadow: 0 2px 14px rgba(0, 0, 0, .55);
   }
 }
 /* ...ou force par le bouton Theme. */
 :root[data-theme="dark"] {
-  --bg: #0f1115;
-  --surface: #171a21;
-  --surface-2: #222733;
-  --text: #e6e8ee;
-  --muted: #9aa3b6;
-  --border: #2a3040;
-  --code-bg: #171b24;
-  --shadow: 0 2px 12px rgba(0, 0, 0, .45);
+  --bg: #0d0b12;
+  --surface: #16131f;
+  --surface-2: #221c30;
+  --text: #e8e6f0;
+  --muted: #9b93b5;
+  --border: #2b2440;
+  --code-bg: #15121d;
+  --link: #b79cff;
+  --shadow: 0 2px 14px rgba(0, 0, 0, .55);
 }
 
 * { box-sizing: border-box; }
@@ -248,7 +251,7 @@ main {
 .markdown ul, .markdown ol { padding-left: 1.4em; }
 .markdown li { margin: .3em 0; }
 .markdown li::marker { color: var(--muted); }
-.markdown a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.markdown a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 
 .markdown blockquote {
   padding: .1px 0 .1px 14px;

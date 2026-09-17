@@ -6,8 +6,9 @@ Les couleurs se changent dans BG et FG ci-dessous.
 """
 import struct, zlib, math, os
 
-BG = (0x4F, 0x7C, 0xFF)   # bleu du fond
-FG = (0xFF, 0xFF, 0xFF)   # blanc du logo
+BG = (0x12, 0x10, 0x19)   # noir violace du fond
+FG = (0x9B, 0x6B, 0xFF)   # violet du monogramme
+FG2 = (0xC4, 0xA6, 0xFF)  # violet clair du second A
 SS = 4                    # super-echantillonnage (anti-aliasing)
 
 
@@ -101,20 +102,31 @@ def draw_icon(size, padding_ratio=0.0, radius_ratio=0.22):
     else:
         c.rounded_rect(0, 0, n - 1, n - 1, n * radius_ratio, BG)
     # zone du logo
-    m = n * (0.22 + padding_ratio)
+    m = n * (0.20 + padding_ratio)
     w = n - 2 * m
-    stroke = max(2.0, w * 0.115)
-    # lettre M
-    top, bot = m, m + w * 0.72
-    c.thick_line(m, bot, m, top, stroke, FG)
-    c.thick_line(m, top, m + w * 0.25, bot - w * 0.22, stroke, FG)
-    c.thick_line(m + w * 0.25, bot - w * 0.22, m + w * 0.5, top, stroke, FG)
-    c.thick_line(m + w * 0.5, top, m + w * 0.5, bot, stroke, FG)
-    # fleche vers le bas
-    ax = m + w * 0.82
-    c.thick_line(ax, top, ax, bot - w * 0.2, stroke, FG)
-    head = w * 0.2
-    c.triangle((ax - head, bot - head * 1.35), (ax + head, bot - head * 1.35), (ax, bot), FG)
+    h = w * 0.74
+    top = m + (w - h) / 2
+    bot = top + h
+    stroke = w * 0.10
+
+    def lettre_a(cx, largeur, couleur, epaisseur=None):
+        """Un A : deux jambes obliques et une barre horizontale."""
+        e = epaisseur or stroke
+        gauche = cx - largeur / 2
+        droite = cx + largeur / 2
+        c.thick_line(gauche, bot, cx, top, e, couleur)
+        c.thick_line(cx, top, droite, bot, e, couleur)
+        # la barre est posee a 62 % de la hauteur, entre les deux jambes
+        y = top + h * 0.62
+        k = (y - top) / h * (largeur / 2)
+        c.thick_line(cx - k, y, cx + k, y, e * 0.82, couleur)
+
+    # Deux A cote a cote, avec un petit espace : c'est ce qui reste le plus
+    # lisible quand l'icone est affichee tout petit.
+    largeur_a = w * 0.455
+    lettre_a(m + w * 0.238, largeur_a, FG)         # premier A
+    lettre_a(m + w * 0.762, largeur_a, FG2)        # second A, violet plus clair
+
     return c.downsample(SS)
 
 

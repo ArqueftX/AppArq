@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v3';
+var VERSION = 'v4';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 

@@ -70,7 +70,7 @@ Markdown standard (GitHub Flavored Markdown).
 | `app.js` | Le fonctionnement : ouvrir un fichier, l'afficher, les réglages |
 | `sw.js` | Le *service worker* : mode hors connexion + réception des fichiers partagés |
 | `manifest.webmanifest` | La carte d'identité de l'app (nom, icône, couleurs) |
-| `icons/` | Les icônes affichées sur l'écran d'accueil |
+| `icons/` | Le logo « AA », aux différentes tailles attendues par Android |
 | `tools/make_icons.py` | Regénère les icônes (`python3 tools/make_icons.py`) |
 | `vendor/` | Deux bibliothèques externes, copiées ici pour marcher hors connexion |
 
@@ -88,9 +88,10 @@ la modification est publiée automatiquement en une minute environ.
 
 Quelques exemples faciles pour commencer :
 
-- **Changer la couleur** : dans `style.css`, la ligne `--accent: #4f7cff;` tout en haut.
-  Mets n'importe quel code couleur, par exemple `#22a06b` pour du vert. Pour que
-  l'icône suive, change aussi `BG` dans `tools/make_icons.py`.
+- **Changer la couleur** : dans `style.css`, les lignes `--accent` (les boutons)
+  et `--link` (les liens), tout en haut. Pour que l'icône suive, change `BG`
+  (le fond), `FG` et `FG2` (les deux A) dans `tools/make_icons.py`, puis relance
+  `python3 tools/make_icons.py`.
 - **Changer le nom affiché** : dans `manifest.webmanifest`, les champs `name` et `short_name`.
 - **Changer la taille de texte par défaut** : dans `app.js`, le `|| 17` de la ligne
   `var taille = parseInt(...) || 17;`.
@@ -99,11 +100,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=3` → `style.css?v=4` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v3';` → `'v4'`.
+> 1. dans `index.html` : `style.css?v=4` → `style.css?v=5` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v4';` → `'v5'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=4` est une adresse qu'il n'a jamais vue.
+> `style.css?v=5` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
