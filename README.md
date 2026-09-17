@@ -71,7 +71,9 @@ Markdown standard (GitHub Flavored Markdown).
 | `sw.js` | Le *service worker* : mode hors connexion + réception des fichiers partagés |
 | `manifest.webmanifest` | La carte d'identité de l'app (nom, icône, couleurs) |
 | `icons/` | Le logo « AA », aux différentes tailles attendues par Android |
-| `tools/make_icons.py` | Regénère les icônes (`python3 tools/make_icons.py`) |
+| `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
+| `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
+| `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
 | `vendor/` | Deux bibliothèques externes, copiées ici pour marcher hors connexion |
 
 **Les bibliothèques utilisées :**
@@ -89,9 +91,13 @@ la modification est publiée automatiquement en une minute environ.
 Quelques exemples faciles pour commencer :
 
 - **Changer la couleur** : dans `style.css`, les lignes `--accent` (les boutons)
-  et `--link` (les liens), tout en haut. Pour que l'icône suive, change `BG`
-  (le fond), `FG` et `FG2` (les deux A) dans `tools/make_icons.py`, puis relance
-  `python3 tools/make_icons.py`.
+  et `--link` (les liens), tout en haut.
+- **Retoucher le logo** : tout est dans les réglages en haut de
+  `tools/make_logo.py` — les violets (`VIOLET_CLAIR`, `VIOLET`, `VIOLET_FONCE`),
+  le fond (`FOND_1`, `FOND_2`), l'épaisseur des jambes (`EP_JAMBE`), la largeur
+  du montant central (`EP_MONT`), la hauteur de la barre du A (`BARRE`) ou son
+  galbe (`GALBE_2`). Puis `python3 tools/make_logo.py` pour refaire le SVG, et
+  `node tools/rasterise-logo.js` pour refaire les PNG.
 - **Changer le nom affiché** : dans `manifest.webmanifest`, les champs `name` et `short_name`.
 - **Changer la taille de texte par défaut** : dans `app.js`, le `|| 17` de la ligne
   `var taille = parseInt(...) || 17;`.
@@ -101,7 +107,7 @@ Quelques exemples faciles pour commencer :
 > l'ancienne version gardée en mémoire :
 >
 > 1. dans `index.html` : `style.css?v=4` → `style.css?v=5` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v4';` → `'v5'`.
+> 2. dans `sw.js` : `var VERSION = 'v5';` → `'v6'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
 > `style.css?v=5` est une adresse qu'il n'a jamais vue.
