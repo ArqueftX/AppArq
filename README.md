@@ -89,9 +89,15 @@ Quelques exemples faciles pour commencer :
 - **Changer la taille de texte par défaut** : dans `app.js`, le `|| 17` de la ligne
   `var taille = parseInt(...) || 17;`.
 
-> ⚠️ Après avoir modifié un fichier, incrémente `VERSION` dans `sw.js`
-> (`'v1'` → `'v2'`, etc.). Sans ça, ton téléphone continuera d'afficher
-> l'ancienne version gardée en mémoire.
+> ⚠️ **Après chaque modification de `style.css` ou `app.js`**, change le numéro
+> de version à deux endroits, sinon ton téléphone continuera d'afficher
+> l'ancienne version gardée en mémoire :
+>
+> 1. dans `index.html` : `style.css?v=2` → `style.css?v=3` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v2';` → `'v3'`.
+>
+> C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
+> `style.css?v=3` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

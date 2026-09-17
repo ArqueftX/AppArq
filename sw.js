@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v1';
+var VERSION = 'v2';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 
@@ -27,7 +27,13 @@ var FICHIERS = [
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE_APP)
-      .then(function (cache) { return cache.addAll(FICHIERS); })
+      .then(function (cache) {
+        // 'reload' : on force le telechargement depuis le serveur, sans passer
+        // par le cache du navigateur (sinon on risque de figer un vieux fichier).
+        return cache.addAll(FICHIERS.map(function (url) {
+          return new Request(url, { cache: 'reload' });
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -99,7 +105,7 @@ self.addEventListener('fetch', function (event) {
   // 4) Le reste : cache d'abord (rapide, hors connexion),
   //    avec mise a jour discrete en arriere-plan.
   event.respondWith(
-    caches.match(request).then(function (enCache) {
+    caches.match(request, { ignoreSearch: true }).then(function (enCache) {
       var reseau = fetch(request).then(function (reponse) {
         if (reponse && reponse.status === 200 && reponse.type === 'basic') {
           var copie = reponse.clone();
