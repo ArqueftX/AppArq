@@ -123,13 +123,26 @@ body {
 
 /* ----- bascule entre les deux vues ----- */
 body[data-vue="accueil"] #doc,
+body[data-vue="accueil"] #source,
 body[data-vue="doc"] #accueil { display: none; }
+
+/* Deux facons de lire un document : mis en forme, ou tel qu'il est ecrit. */
+body[data-mode="rendu"] #source,
+body[data-mode="source"] #doc { display: none; }
+body[data-vue="accueil"] #btn-mode { display: none; }
 body[data-vue="accueil"] #btn-home,
 body[data-vue="accueil"] .reglage-texte,
 body[data-vue="doc"] #btn-menu,
 body[data-vue="doc"] #btn-open { display: none; }
 body[data-vue="accueil"] .recherche-nav,
 body[data-vue="accueil"] #recherche-compteur { display: none; }
+
+/* sur les tres petits ecrans, on resserre un peu les boutons */
+@media (max-width: 380px) {
+  .appbar { gap: 2px; }
+  .appbar .icon-btn { width: 36px; height: 36px; }
+  .appbar .icon-btn svg { width: 20px; height: 20px; }
+}
 
 /* ----- barre de recherche ----- */
 .recherche {
@@ -399,6 +412,52 @@ main {
   .voile { display: none !important; }
   body { padding-left: 284px; }
   body[data-vue="accueil"] #btn-menu { display: none; }
+}
+
+/* ----- texte d'origine ----- */
+.source {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.source-barre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 9px 10px 9px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.source-mention {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.petit-btn {
+  flex: none;
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.petit-btn:active { transform: scale(.97); }
+
+#source-texte {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(var(--reading-size) * .92);
+  line-height: 1.62;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  tab-size: 2;
 }
 
 /* ----- rendu du Markdown ----- */

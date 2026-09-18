@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=7">
+<link rel="stylesheet" href="./style.css?v=8">
 </head>
 <body data-vue="accueil">
 
@@ -27,6 +27,9 @@
   <div class="actions">
     <button id="btn-recherche" class="icon-btn" aria-label="Rechercher" title="Rechercher">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 0 1 4.6 9.9l5.1 5.1-1.4 1.4-5.1-5.1A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+    </button>
+    <button id="btn-mode" class="icon-btn" aria-label="Voir le texte d'origine" title="Texte d'origine">
+      <svg id="icone-mode" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
     </button>
     <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier" title="Ouvrir un fichier">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
@@ -102,6 +105,15 @@
   <!-- ===================== DOCUMENT AFFICHÉ ===================== -->
   <article id="doc" class="markdown"></article>
 
+  <!-- ===================== TEXTE D'ORIGINE ===================== -->
+  <section id="source" class="source">
+    <div class="source-barre">
+      <span class="source-mention">Texte d'origine, non transformé</span>
+      <button id="btn-copier" class="petit-btn" type="button">Copier tout</button>
+    </div>
+    <pre id="source-texte"></pre>
+  </section>
+
 </main>
 
 <input type="file" id="file-input" hidden>
@@ -114,6 +126,6 @@
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
-<script src="./app.js?v=6"></script>
+<script src="./app.js?v=7"></script>
 </body>
 </html>

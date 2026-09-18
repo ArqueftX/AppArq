@@ -55,6 +55,15 @@ dans l'application. La croix à droite retire une ligne de la liste.
 La recherche ne tient pas compte des majuscules, mais elle est sensible aux
 accents : « reunion » ne trouvera pas « réunion ».
 
+**Mise en forme ou texte d'origine** (bouton `< >` pendant la lecture) : par
+défaut l'application *interprète* le Markdown — les `*` deviennent de l'italique
+ou du gras, les `#` deviennent des titres, et ces marqueurs disparaissent de
+l'affichage. Le bouton `< >` montre le fichier **tel qu'il est écrit**, marqueurs
+compris, dans une police à chasse fixe. C'est cette vue qu'il faut utiliser pour
+copier du texte et le recoller ailleurs sans rien perdre. Un bouton **Copier
+tout** y copie le fichier entier en un geste. Ton choix est mémorisé : si tu
+préfères toujours le texte brut, l'application s'ouvrira dessus.
+
 **Copier du texte** : seul le texte du document est sélectionnable. La barre du
 haut, le menu et les boutons ne le sont pas, ce qui évite que la sélection
 déborde sur toute la page quand on tire la poignée au-delà du texte. « Tout
@@ -73,6 +82,7 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | ☰ | Ouvrir le menu des formats (sur l'accueil) |
 | ← | Revenir à la page d'accueil (pendant la lecture) |
 | 🔍 | Rechercher : dans les fichiers sur l'accueil, dans le texte pendant la lecture |
+| `< >` | Basculer entre mise en forme et texte d'origine (pendant la lecture) |
 | 📁 | Ouvrir un fichier (sur l'accueil) |
 | A− / A+ | Réduire ou agrandir le texte (mémorisé) |
 | 🌗 | Basculer entre thème automatique, clair et sombre |
@@ -139,11 +149,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=7` → `style.css?v=8` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v8';` → `'v9'`.
+> 1. dans `index.html` : `style.css?v=8` → `style.css?v=9` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v9';` → `'v10'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=8` est une adresse qu'il n'a jamais vue.
+> `style.css?v=9` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

@@ -45,6 +45,7 @@
     recents: 'apparq:fichiers-recents',
     ancien:  'apparq:dernier-document',   // ancienne cle, reprise puis effacee
     size:    'apparq:taille-texte',
+    mode:    'apparq:mode-lecture',
     theme:   'apparq:theme'
   };
 
@@ -350,8 +351,12 @@
 
   marked.use({ gfm: true, breaks: false });
 
-  var elDoc      = $('#doc');
-  var htmlDocument = null;     // le HTML du document, sans surlignage
+  var elDoc         = $('#doc');
+  var elSourceTexte = $('#source-texte');
+
+  var texteOriginal = '';      // le fichier tel qu'il a ete ouvert, intact
+  var htmlRendu  = null;       // instantanes sans surlignage, pour la recherche
+  var htmlSource = null;
   var elTitre     = $('#doc-title');
   var elProgress = $('#progress');
   var elToTop    = $('#to-top');
@@ -380,8 +385,13 @@
       wrap.appendChild(table);
     });
 
+    // La vue "texte d'origine" recoit le fichier tel quel, sans transformation.
+    texteOriginal = texte;
+    elSourceTexte.textContent = texte;
+
     // On garde le HTML propre : la recherche le reconstruit a chaque frappe.
-    htmlDocument = elDoc.innerHTML;
+    htmlRendu = elDoc.innerHTML;
+    htmlSource = elSourceTexte.innerHTML;
 
     // Le bouton Retour d'Android doit ramener a l'accueil, pas fermer l'app.
     if (history.state && history.state.menu) history.replaceState({ vue: 'accueil' }, '');
@@ -426,7 +436,73 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 7. Recherche                                                */
+  /* 7. Mise en forme ou texte d'origine                         */
+  /* ----------------------------------------------------------- */
+
+  var ICONES = {
+    // vers quoi le bouton emmene : chevrons = le texte brut, lignes = le rendu
+    source: 'M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6z',
+    rendu:  'M3 5h18v2H3zm0 4h12v2H3zm0 4h18v2H3zm0 4h12v2H3z'
+  };
+
+  var mode = lire(STORE.mode) === 'source' ? 'source' : 'rendu';
+
+  function appliquerMode() {
+    document.body.dataset.mode = mode;
+    ecrire(STORE.mode, mode);
+
+    var versSource = mode === 'rendu';
+    var bouton = $('#btn-mode');
+    $('#icone-mode').setAttribute('d', versSource ? ICONES.source : ICONES.rendu);
+    bouton.setAttribute('aria-label', versSource ? "Voir le texte d'origine" : 'Voir la mise en forme');
+    bouton.setAttribute('title', versSource ? "Texte d'origine" : 'Mise en forme');
+  }
+
+  appliquerMode();
+
+  $('#btn-mode').addEventListener('click', function () {
+    mode = mode === 'rendu' ? 'source' : 'rendu';
+    appliquerMode();
+    toast(mode === 'source' ? "Texte d'origine, non transformé" : 'Texte mis en forme');
+    if (!elRecherche.hidden) lancerRecherche();   // on resurligne dans la vue affichee
+    window.scrollTo(0, 0);
+    majProgression();
+  });
+
+  // Copier l'integralite du fichier, avec ses * et ses # intacts.
+  $('#btn-copier').addEventListener('click', function () {
+    var fini = function (ok) {
+      toast(ok ? 'Texte copié, tel qu\'il est écrit dans le fichier.'
+               : 'La copie a échoué. Sélectionne le texte à la main.');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texteOriginal).then(function () { fini(true); },
+                                                        function () { fini(copieDeSecours()); });
+    } else {
+      fini(copieDeSecours());
+    }
+  });
+
+  // Methode de secours pour les navigateurs sans presse-papier moderne.
+  function copieDeSecours() {
+    try {
+      var zone = document.createElement('textarea');
+      zone.value = texteOriginal;
+      zone.setAttribute('readonly', '');
+      zone.style.position = 'fixed';
+      zone.style.opacity = '0';
+      document.body.appendChild(zone);
+      zone.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(zone);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /* ----------------------------------------------------------- */
+  /* 8. Recherche                                                */
   /*    - dans un document : surligne et fait defiler            */
   /*    - sur l'accueil    : filtre les fichiers recents         */
   /* ----------------------------------------------------------- */
@@ -456,8 +532,16 @@
     restaurerDocument();
   }
 
+  // La recherche s'applique a la vue affichee : le rendu, ou le texte d'origine.
+  function conteneurLecture() {
+    return document.body.dataset.mode === 'source' ? elSourceTexte : elDoc;
+  }
+
   function restaurerDocument() {
-    if (marques.length && htmlDocument !== null) elDoc.innerHTML = htmlDocument;
+    if (marques.length) {
+      if (htmlRendu !== null) elDoc.innerHTML = htmlRendu;
+      if (htmlSource !== null) elSourceTexte.innerHTML = htmlSource;
+    }
     marques = [];
     indexMarque = 0;
   }
@@ -473,7 +557,7 @@
     if (!terme) { elCompteur.textContent = ''; return; }
 
     var cible = terme.toLowerCase();
-    var parcours = document.createTreeWalker(elDoc, NodeFilter.SHOW_TEXT);
+    var parcours = document.createTreeWalker(conteneurLecture(), NodeFilter.SHOW_TEXT);
     var noeuds = [];
     while (parcours.nextNode()) noeuds.push(parcours.currentNode);
 
@@ -552,7 +636,7 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 8. Navigation (fleche retour, bouton Retour d'Android)      */
+  /* 9. Navigation (fleche retour, bouton Retour d'Android)      */
   /* ----------------------------------------------------------- */
 
   var vuePrecedente = null;
@@ -593,7 +677,7 @@
   window.addEventListener('popstate', function (e) { appliquerEtat(e.state); });
 
   /* ----------------------------------------------------------- */
-  /* 9. Confort de lecture                                       */
+  /* 10. Confort de lecture                                       */
   /* ----------------------------------------------------------- */
 
   var taille = parseInt(lire(STORE.size), 10) || 17;
@@ -651,7 +735,7 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 10. Fichier recu par "Partager" depuis Android               */
+  /* 11. Fichier recu par "Partager" depuis Android               */
   /* ----------------------------------------------------------- */
 
   function recupererPartage() {
@@ -671,7 +755,7 @@
   }
 
   /* ----------------------------------------------------------- */
-  /* 11. Demarrage                                              */
+  /* 12. Demarrage                                              */
   /* ----------------------------------------------------------- */
 
   function demarrer() {
