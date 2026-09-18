@@ -31,13 +31,19 @@ transmet **aucun fichier sur Internet** : tout est lu sur ton appareil.
 
 ## 2. Comment s'en servir
 
-L'application s'ouvre sur sa **page d'accueil** : le logo, un bouton pour ouvrir un
-fichier, et une carte **Reprendre la lecture** qui rouvre le dernier document lu.
+L'application s'ouvre sur sa **page d'accueil**, organisée par format de fichier.
 
-**Ouvrir un fichier** : appuie sur *Ouvrir un fichier .md* (ou l'icône dossier en haut),
-puis choisis ton fichier dans la fenêtre Android.
+**Le menu latéral** (bouton ☰ en haut à gauche) liste les formats reconnus. Pour
+l'instant il n'y en a qu'un, Markdown, avec le nombre de fichiers récents. Sur
+un écran large (tablette, ordinateur) ce menu reste affiché en permanence.
 
-**Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour* d'Android.
+**La page du format** affiche un bouton pour ouvrir un nouveau fichier, puis la
+liste des **fichiers récents** : leur nom, quand tu les as ouverts et leur taille.
+Un appui rouvre le fichier — même hors connexion, puisque son contenu est gardé
+dans l'application. La croix à droite retire une ligne de la liste.
+
+**Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour*
+d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 
 **Depuis ton gestionnaire de fichiers** : appui long sur un fichier `.md` →
 **Partager** → **AppArq**. Le document s'ouvre directement.
@@ -46,12 +52,15 @@ puis choisis ton fichier dans la fenêtre Android.
 
 | Bouton | Effet |
 | --- | --- |
-| ← | Revenir à la page d'accueil (visible pendant la lecture) |
+| ☰ | Ouvrir le menu des formats (sur l'accueil) |
+| ← | Revenir à la page d'accueil (pendant la lecture) |
 | 📁 | Ouvrir un autre fichier |
 | A− / A+ | Réduire ou agrandir le texte (mémorisé) |
 | 🌗 | Basculer entre thème automatique, clair et sombre |
 
-Le dernier document lu reste proposé sur l'accueil, même après avoir fermé l'application.
+Les 15 derniers fichiers restent proposés sur l'accueil, même après avoir fermé
+l'application. Les contenus sont gardés jusqu'à environ 2 Mo au total : au-delà,
+les plus anciens sont oubliés et leur ligne indique « à rouvrir ».
 
 ### Ce que l'application sait afficher
 
@@ -65,7 +74,7 @@ Markdown standard (GitHub Flavored Markdown).
 
 | Fichier | À quoi il sert |
 | --- | --- |
-| `index.html` | La structure des deux écrans : l'accueil et le document |
+| `index.html` | La structure : barre du haut, menu latéral, accueil, document |
 | `style.css` | L'apparence : couleurs, tailles, espacements |
 | `app.js` | Le fonctionnement : ouvrir un fichier, l'afficher, les réglages |
 | `sw.js` | Le *service worker* : mode hors connexion + réception des fichiers partagés |
@@ -101,16 +110,21 @@ Quelques exemples faciles pour commencer :
 - **Changer le nom affiché** : dans `manifest.webmanifest`, les champs `name` et `short_name`.
 - **Changer la taille de texte par défaut** : dans `app.js`, le `|| 17` de la ligne
   `var taille = parseInt(...) || 17;`.
+- **Ajouter un format de fichier** : tout est prévu pour. En haut de `app.js`, la
+  liste `FORMATS` décrit chaque format (son nom, sa pastille, les extensions
+  acceptées et la fonction qui transforme le fichier en HTML). Ajoute une entrée,
+  ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil et
+  l'historique s'adaptent tout seuls.
 
 > ⚠️ **Après chaque modification de `style.css` ou `app.js`**, change le numéro
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=4` → `style.css?v=5` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v5';` → `'v6'`.
+> 1. dans `index.html` : `style.css?v=5` → `style.css?v=6` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v6';` → `'v7'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=5` est une adresse qu'il n'a jamais vue.
+> `style.css?v=6` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
@@ -126,7 +140,6 @@ puis ouvre `http://localhost:8000` dans un navigateur.
 
 ## 5. Idées pour la suite
 
-- Une bibliothèque de documents sur l'accueil (garder plusieurs fichiers, pas seulement le dernier)
 - Un sommaire cliquable pour les longs documents
 - Une recherche dans le document
 - Un mode édition, pour écrire du Markdown et pas seulement le lire

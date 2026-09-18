@@ -9,19 +9,22 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=4">
+<link rel="stylesheet" href="./style.css?v=5">
 </head>
 <body data-vue="accueil">
 
 <div id="progress" aria-hidden="true"></div>
 
 <header class="appbar">
+  <button id="btn-menu" class="icon-btn" aria-label="Ouvrir le menu des formats" aria-expanded="false" title="Formats">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+  </button>
   <button id="btn-home" class="icon-btn" aria-label="Revenir à l'accueil" title="Accueil">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
   </button>
   <h1 class="brand" id="doc-title">AppArq</h1>
   <div class="actions">
-    <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier Markdown" title="Ouvrir un fichier">
+    <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier" title="Ouvrir un fichier">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
     </button>
     <button id="btn-smaller" class="icon-btn reglage-texte" aria-label="Réduire la taille du texte" title="Texte plus petit">
@@ -36,45 +39,41 @@
   </div>
 </header>
 
+<!-- ===================== MENU LATÉRAL ===================== -->
+<div id="voile" class="voile" hidden></div>
+
+<nav id="menu" class="menu" aria-label="Formats de fichiers">
+  <div class="menu-entete">
+    <img src="./icons/logo.svg" alt="" width="38" height="38" class="menu-logo">
+    <span class="menu-nom">AppArq</span>
+  </div>
+  <ul id="menu-liste" class="menu-liste"></ul>
+  <p class="menu-pied">D'autres formats viendront s'ajouter ici.</p>
+</nav>
+
 <main id="main">
 
-  <!-- ===================== PAGE D'ACCUEIL ===================== -->
+  <!-- ===================== ACCUEIL : UN FORMAT ===================== -->
   <section id="accueil" class="accueil">
 
-    <div class="hero">
-      <img src="./icons/logo.svg" alt="" class="logo" width="104" height="104">
-      <h2 class="titre-app">AppArq</h2>
-      <p class="baseline">Tes fichiers Markdown, bien mis en forme.<br>Tout reste sur ton téléphone.</p>
-    </div>
+    <header class="format-entete">
+      <span class="pastille" id="format-pastille">MD</span>
+      <div class="format-texte">
+        <h2 id="format-titre">Markdown</h2>
+        <p id="format-detail">Fichiers .md et .markdown</p>
+      </div>
+    </header>
 
-    <button id="carte-reprise" class="carte carte-action" hidden>
-      <span class="carte-icone" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      </span>
-      <span class="carte-texte">
-        <span class="carte-titre">Reprendre la lecture</span>
-        <span class="carte-detail" id="reprise-nom"></span>
-      </span>
-    </button>
+    <button id="btn-open-big" class="primary-btn">Ouvrir un fichier</button>
 
-    <button id="btn-open-big" class="primary-btn">Ouvrir un fichier .md</button>
+    <h3 class="section-titre">Fichiers récents</h3>
+    <ul id="recents" class="recents"></ul>
+    <p id="recents-vide" class="vide" hidden>
+      Aucun fichier ouvert pour l'instant. Les fichiers que tu ouvres
+      apparaîtront ici, et resteront accessibles hors connexion.
+    </p>
 
-    <ul class="aide">
-      <li>
-        <span class="aide-num">1</span>
-        <span>Appuie sur <strong>Ouvrir un fichier .md</strong> et choisis un fichier sur ton téléphone.</span>
-      </li>
-      <li>
-        <span class="aide-num">2</span>
-        <span>Ou, depuis ton gestionnaire de fichiers : appui long sur un <code>.md</code> → <em>Partager</em> → <strong>AppArq</strong>.</span>
-      </li>
-      <li id="aide-installer" hidden>
-        <span class="aide-num">3</span>
-        <span>Pour l'installer sur l'écran d'accueil : menu <strong>⋮</strong> de Chrome → <em>Ajouter à l'écran d'accueil</em>.</span>
-      </li>
-    </ul>
-
-    <p class="pied">Aucun fichier n'est envoyé sur Internet. L'application fonctionne hors connexion.</p>
+    <p class="pied">Aucun fichier n'est envoyé sur Internet. Tout reste sur ton téléphone.</p>
   </section>
 
   <!-- ===================== DOCUMENT AFFICHÉ ===================== -->
@@ -82,7 +81,7 @@
 
 </main>
 
-<input type="file" id="file-input" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" hidden>
+<input type="file" id="file-input" hidden>
 
 <button id="to-top" class="to-top" aria-label="Revenir en haut" hidden>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 7h-4v7h-6v-7H5z"/></svg>
@@ -92,6 +91,6 @@
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
-<script src="./app.js?v=4"></script>
+<script src="./app.js?v=5"></script>
 </body>
 </html>
