@@ -154,11 +154,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=10` → `style.css?v=11` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v11';` → `'v12'`.
+> 1. dans `index.html` : `style.css?v=11` → `style.css?v=12` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v12';` → `'v13'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=11` est une adresse qu'il n'a jamais vue.
+> `style.css?v=12` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

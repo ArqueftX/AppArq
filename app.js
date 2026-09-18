@@ -419,6 +419,7 @@
     elTitre.textContent = nomFichier || 'Document';
     document.title = (nomFichier || 'Document') + ' — AppArq';
     window.scrollTo(0, 0);
+    mesurerHauteur();
     majProgression();
 
     if (terme) ouvrirRecherche(terme);
@@ -496,6 +497,7 @@
     toast(mode === 'source' ? $('.source-mention').textContent : 'Texte mis en forme');
     if (!elRecherche.hidden) lancerRecherche();   // on resurligne dans la vue affichee
     window.scrollTo(0, 0);
+    mesurerHauteur();
     majProgression();
   });
 
@@ -696,6 +698,7 @@
       majAccueil();
       window.scrollTo(0, 0);
     }
+    mesurerHauteur();
     majProgression();
   }
 
@@ -734,15 +737,37 @@
     toast(NOMS[theme]);
   });
 
-  function majProgression() {
-    var enLecture = document.body.dataset.vue === 'doc';
-    var hauteur = document.documentElement.scrollHeight - window.innerHeight;
-    var ratio = (enLecture && hauteur > 0) ? window.scrollY / hauteur : 0;
-    elProgress.style.width = (ratio * 100).toFixed(1) + '%';
-    elToTop.hidden = !enLecture || window.scrollY < 600;
+  // La hauteur du document est mesuree quand elle change, pas a chaque
+  // defilement : la relire en boucle forcait un recalcul de mise en page a
+  // chaque image, ce qui rendait le defilement pateux pendant une selection.
+  var hauteurDefilement = 0;
+  function mesurerHauteur() {
+    hauteurDefilement = document.documentElement.scrollHeight - window.innerHeight;
   }
+
+  // On ne redessine qu'une fois par image, jamais plus.
+  var redessinDemande = false;
+  function majProgression() {
+    if (redessinDemande) return;
+    redessinDemande = true;
+    requestAnimationFrame(function () {
+      redessinDemande = false;
+      dessinerProgression();
+    });
+  }
+
+  function dessinerProgression() {
+    var enLecture = document.body.dataset.vue === 'doc';
+    var ratio = (enLecture && hauteurDefilement > 0) ? window.scrollY / hauteurDefilement : 0;
+    // scaleX plutot qu'une largeur en pourcentage : c'est la carte graphique
+    // qui s'en charge, sans repasser par la mise en page.
+    elProgress.style.transform = 'scaleX(' + Math.min(1, ratio).toFixed(4) + ')';
+    var montrer = enLecture && window.scrollY >= 600;
+    if (montrer === elToTop.hidden) elToTop.hidden = !montrer;
+  }
+
   window.addEventListener('scroll', majProgression, { passive: true });
-  window.addEventListener('resize', majProgression);
+  window.addEventListener('resize', function () { mesurerHauteur(); majProgression(); });
   elToTop.addEventListener('click', function () {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
