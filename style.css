@@ -49,10 +49,15 @@
 
 html { -webkit-text-size-adjust: 100%; }
 
-/* Seul le texte du document est selectionnable. Sans cela, tirer la poignee
-   de selection au-dela du texte fait deborder la selection sur l'habillage
-   (barre du haut, menu, boutons) : Chrome remonte alors au <body> et c'est
-   toute la page qui se retrouve selectionnee. */
+/* Selection : toute la colonne de lecture est selectionnable, mais pas
+   l'habillage (barre du haut, menu, boutons, accueil).
+   - sans le garde-fou sur <body>, tirer la poignee au-dela du texte faisait
+     deborder la selection sur l'habillage, et Chrome selectionnait alors
+     toute la page ;
+   - mais en ne rendant selectionnable que le texte lui-meme, la poignee
+     tombait sur une zone interdite des qu'on depassait la derniere ligne,
+     et la selection disparaissait. D'ou <main> selectionnable en entier,
+     avec une hauteur minimale sous le texte. */
 body {
   -webkit-user-select: none;
   user-select: none;
@@ -317,6 +322,21 @@ main {
   max-width: 44rem;
   margin: 0 auto;
   padding: 20px 16px calc(48px + env(safe-area-inset-bottom));
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* l'habillage, lui, ne se selectionne pas */
+.haut, .menu, .voile, .to-top, .toast, #accueil {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* de la place sous le texte : la poignee de selection doit toujours avoir
+   du terrain selectionnable sous elle, meme en fin de document */
+#doc, #source {
+  min-height: calc(100vh - 220px);
+  padding-bottom: 20vh;
 }
 
 .format-entete {

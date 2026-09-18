@@ -68,10 +68,11 @@ accents : « reunion » ne trouvera pas « réunion ».
 Ton choix est mémorisé : si tu préfères toujours le texte brut, l'application
 s'ouvrira dessus. Au premier document lu, un message signale le bouton.
 
-**Copier du texte** : seul le texte du document est sélectionnable. La barre du
-haut, le menu et les boutons ne le sont pas, ce qui évite que la sélection
-déborde sur toute la page quand on tire la poignée au-delà du texte. « Tout
-sélectionner » ne prend que le document, jamais l'habillage de l'application.
+**Copier du texte** : toute la colonne de lecture est sélectionnable, avec de la
+marge sous la dernière ligne pour que la poignée ait toujours du terrain sous
+elle. En revanche la barre du haut, le menu et les boutons ne le sont pas : la
+sélection ne peut donc pas déborder sur l'habillage, et « Tout sélectionner » ne
+prend que le document.
 
 **Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour*
 d'Android (qui ferme aussi le menu latéral s'il est ouvert).
@@ -116,12 +117,15 @@ Markdown standard (GitHub Flavored Markdown).
 | `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
 | `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
 | `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
-| `vendor/` | Deux bibliothèques externes, copiées ici pour marcher hors connexion |
+| `vendor/` | Quatre bibliothèques externes, copiées ici pour marcher hors connexion |
 
 **Les bibliothèques utilisées :**
-[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML, et
-[DOMPurify](https://github.com/cure53/DOMPurify) nettoie ce HTML pour qu'un
-fichier piégé ne puisse rien exécuter. Leurs licences sont dans `vendor/`.
+[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML,
+[Turndown](https://github.com/mixmark-io/turndown) fait le chemin inverse pour
+les livres EPUB, [fflate](https://github.com/101arrowz/fflate) ouvre l'archive
+d'un EPUB, et [DOMPurify](https://github.com/cure53/DOMPurify) nettoie le HTML
+pour qu'un fichier piégé ne puisse rien exécuter. Leurs licences sont dans
+`vendor/`.
 
 ---
 
@@ -146,9 +150,11 @@ Quelques exemples faciles pour commencer :
 - **Ajouter un format de fichier** : tout est prévu pour. En haut de `app.js`, la
   liste `FORMATS` décrit chaque format : son nom, sa pastille, les extensions
   acceptées, la fonction `rendu` (fichier → affichage mis en forme) et la
-  fonction `source` (ce que montre le bouton `‹ ›`, avec sa mention). Ajoute une
-  entrée, ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil,
-  l'historique et la détection par extension s'adaptent tout seuls.
+  fonction `source` (ce que montre le bouton `‹ ›`, avec sa mention). Un format
+  dont le fichier n'est pas du texte — comme l'EPUB — ajoute `binaire: true` et
+  une fonction `extraire`. Ajoute une entrée, ajoute sa clé dans `ORDRE`, et le
+  menu latéral, la page d'accueil, l'historique, le partage et la détection par
+  extension s'adaptent tout seuls.
 
 > **Mise à jour de l'application installée** : depuis la v14, l'application
 > vérifie s'il existe une version plus récente chaque fois que tu reviens
@@ -161,11 +167,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=12` → `style.css?v=13` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v14';` → `'v15'`.
+> 1. dans `index.html` : `style.css?v=14` → `style.css?v=15` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v17';` → `'v18'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=13` est une adresse qu'il n'a jamais vue.
+> `style.css?v=15` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

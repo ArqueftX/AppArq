@@ -35,8 +35,164 @@
       source: function (texte) {
         return { texte: texte, mention: "Texte brut, tous les caractères apparents" };
       }
+    },
+
+    epub: {
+      nom: 'EPUB',
+      pastille: 'EPUB',
+      detail: 'Livres .epub — le texte, sans les images',
+      bouton: 'Ouvrir un livre .epub',
+      accept: '.epub,application/epub+zip',
+      extensions: /\.epub$/i,
+      binaire: true,                  // le fichier est une archive, pas du texte
+      extraire: extraireEpub,
+      // version propre : le texte du livre, mis en forme
+      rendu: function (texte) {
+        return nettoyerHtml(texte);
+      },
+      // version brute : le meme texte, reconstruit en Markdown par l'application
+      source: function (texte) {
+        return { texte: htmlVersMarkdown(texte), mention: 'Texte du livre, converti en Markdown' };
+      }
     }
   };
+
+  /* ----- lecture des fichiers EPUB ----------------------------------- */
+
+  function nettoyerHtml(texte) {
+    return DOMPurify.sanitize(texte, {
+      USE_PROFILES: { html: true },
+      // les images d'un EPUB vivent dans l'archive : elles ne s'afficheraient
+      // pas, et alourdiraient l'historique pour rien
+      FORBID_TAGS: ['style', 'link', 'meta', 'title', 'head', 'img', 'svg', 'picture',
+                    'source', 'form', 'input', 'button', 'audio', 'video']
+    });
+  }
+
+  // Un EPUB est une archive ZIP : un fichier d'aiguillage, un descriptif du
+  // livre (l'OPF) qui donne l'ordre des chapitres, puis les chapitres en HTML.
+  function extraireEpub(donnees) {
+    var archive = fflate.unzipSync(new Uint8Array(donnees));
+    var decodeur = new TextDecoder('utf-8');
+
+    function lire(chemin) {
+      var brut = archive[chemin];
+      return brut ? decodeur.decode(brut) : null;
+    }
+
+    // 1. META-INF/container.xml indique ou se trouve le descriptif du livre
+    var container = lire('META-INF/container.xml');
+    if (!container) throw new Error('archive sans container.xml');
+    var aiguillage = new DOMParser().parseFromString(container, 'application/xml');
+    var racine = aiguillage.getElementsByTagName('rootfile')[0];
+    var cheminOpf = racine && racine.getAttribute('full-path');
+    if (!cheminOpf) throw new Error('descriptif introuvable');
+
+    // 2. le descriptif : la liste des chapitres, et leur ordre
+    var opf = new DOMParser().parseFromString(lire(cheminOpf) || '', 'application/xml');
+    var dossier = cheminOpf.indexOf('/') >= 0 ? cheminOpf.slice(0, cheminOpf.lastIndexOf('/') + 1) : '';
+
+    var parId = {};
+    var items = opf.getElementsByTagName('item');
+    for (var i = 0; i < items.length; i++) {
+      var href = items[i].getAttribute('href');
+      if (!href) continue;
+      parId[items[i].getAttribute('id')] = {
+        chemin: dossier + decodeURIComponent(href).split('#')[0],
+        type: items[i].getAttribute('media-type') || ''
+      };
+    }
+
+    var ordre = [];
+    var refs = opf.getElementsByTagName('itemref');
+    for (var j = 0; j < refs.length; j++) {
+      var item = parId[refs[j].getAttribute('idref')];
+      if (item && /xhtml|html/.test(item.type)) ordre.push(item.chemin);
+    }
+    if (!ordre.length) throw new Error('aucun chapitre');
+
+    // 3. le titre du livre, s'il est declare
+    var titre = null;
+    var metas = opf.getElementsByTagName('*');
+    for (var k = 0; k < metas.length; k++) {
+      if (metas[k].localName === 'title' && metas[k].textContent.trim()) {
+        titre = metas[k].textContent.trim();
+        break;
+      }
+    }
+
+    // 4. les chapitres, mis bout a bout dans l'ordre du livre
+    var morceaux = [];
+    ordre.forEach(function (chemin) {
+      var page = lire(chemin);
+      if (!page) return;
+      var doc = new DOMParser().parseFromString(page, 'text/html');
+      var corps = doc.body ? doc.body.innerHTML : '';
+      if (corps.trim()) morceaux.push(nettoyerHtml(corps));
+    });
+    if (!morceaux.length) throw new Error('livre vide');
+
+    return { texte: morceaux.join('\n<hr />\n'), nom: titre };
+  }
+
+  /* ----- conversion HTML -> Markdown (pour la version brute) --------- */
+
+  var convertisseur = null;
+  function outilMarkdown() {
+    if (convertisseur) return convertisseur;
+
+    convertisseur = new TurndownService({
+      headingStyle: 'atx', hr: '---', bulletListMarker: '-',
+      codeBlockStyle: 'fenced', emDelimiter: '*', strongDelimiter: '**',
+      linkStyle: 'inlined'
+    });
+
+    // Puces : un seul espace apres le tiret, au lieu de trois.
+    convertisseur.addRule('puces', {
+      filter: 'li',
+      replacement: function (contenu, noeud, options) {
+        contenu = contenu.replace(/^\n+/, '').replace(/\n+$/, '\n').replace(/\n/gm, '\n  ');
+        var prefixe = options.bulletListMarker + ' ';
+        var parent = noeud.parentNode;
+        if (parent.nodeName === 'OL') {
+          var depart = parent.getAttribute('start');
+          var rang = Array.prototype.indexOf.call(parent.children, noeud);
+          prefixe = (depart ? Number(depart) + rang : rang + 1) + '. ';
+        }
+        return prefixe + contenu + (noeud.nextSibling && !/\n$/.test(contenu) ? '\n' : '');
+      }
+    });
+
+    // Tableaux : Turndown les aplatit ; on reconstruit la syntaxe Markdown.
+    convertisseur.addRule('tableaux', {
+      filter: 'table',
+      replacement: function (contenu, table) {
+        var lignes = Array.prototype.slice.call(table.rows);
+        if (!lignes.length) return '';
+        var cellule = function (td) {
+          return convertisseur.turndown(td.innerHTML || '')
+            .replace(/\n+/g, ' ').replace(/\|/g, '\\|').trim();
+        };
+        var enLigne = function (c) { return '| ' + c.join(' | ') + ' |'; };
+        var entete = Array.prototype.slice.call(lignes[0].cells).map(cellule);
+        var sortie = [enLigne(entete), enLigne(entete.map(function () { return '---'; }))];
+        lignes.slice(1).forEach(function (l) {
+          sortie.push(enLigne(Array.prototype.slice.call(l.cells).map(cellule)));
+        });
+        return '\n\n' + sortie.join('\n') + '\n\n';
+      }
+    });
+
+    return convertisseur;
+  }
+
+  function htmlVersMarkdown(texte) {
+    try {
+      return outilMarkdown().turndown(nettoyerHtml(texte)).replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    } catch (e) {
+      return texte;
+    }
+  }
 
   // Quel format pour ce nom de fichier ? (null si on ne sait pas)
   function formatPourFichier(nom) {
@@ -46,7 +202,7 @@
     return null;
   }
 
-  var ORDRE = ['markdown'];        // ordre d'affichage dans le menu
+  var ORDRE = ['markdown', 'epub'];   // ordre d'affichage dans le menu
   var formatActif = 'markdown';
   var termeAccueil = '';           // filtre en cours sur la liste des fichiers
 
@@ -59,6 +215,7 @@
     ancien:  'apparq:dernier-document',   // ancienne cle, reprise puis effacee
     size:    'apparq:taille-texte',
     mode:    'apparq:mode-lecture',
+    format:  'apparq:format',
     astuce:  'apparq:astuce-brut',
     theme:   'apparq:theme'
   };
@@ -261,6 +418,7 @@
 
   function choisirFormat(cle) {
     formatActif = cle;
+    ecrire(STORE.format, cle);
     var format = FORMATS[cle];
     $('#format-pastille').textContent = format.pastille;
     $('#format-titre').textContent = format.nom;
@@ -477,20 +635,30 @@
     var nom = file.name || 'Document';
     var format = formatPourFichier(nom) || formatActif;
     if (format !== formatActif) choisirFormat(format);   // on suit le fichier
-    var lecture = file.text
-      ? file.text()
-      : new Promise(function (resolve, reject) {      // secours navigateurs anciens
-          var fr = new FileReader();
-          fr.onload = function () { resolve(String(fr.result)); };
-          fr.onerror = function () { reject(fr.error); };
-          fr.readAsText(file);
-        });
+    var reglages = FORMATS[format];
 
-    lecture.then(function (texte) {
+    var lecture = reglages.binaire
+      ? file.arrayBuffer()
+      : (file.text ? file.text()
+        : new Promise(function (resolve, reject) {      // secours navigateurs anciens
+            var fr = new FileReader();
+            fr.onload = function () { resolve(String(fr.result)); };
+            fr.onerror = function () { reject(fr.error); };
+            fr.readAsText(file);
+          }));
+
+    lecture.then(function (contenu) {
+      var texte = contenu;
+      if (reglages.binaire) {
+        var extrait = reglages.extraire(contenu);   // peut lever une erreur
+        texte = extrait.texte;
+        if (extrait.nom) nom = extrait.nom;
+      }
       ajouterRecent(nom, texte, format);
       afficher(texte, nom, format);
     }).catch(function () {
-      toast('Impossible de lire ce fichier.');
+      toast(reglages.binaire ? "Ce livre n'a pas pu être ouvert."
+                             : 'Impossible de lire ce fichier.');
     });
   }
 
@@ -833,17 +1001,35 @@
 
   function recupererPartage() {
     if (!('caches' in window)) return Promise.resolve(false);
-    var cle = new URL('__partage__', location.href).href;
+    var cleTexte = new URL('__partage__', location.href).href;
+    var cleLivre = new URL('__partage-livre__', location.href).href;
+
     return caches.open('apparq-partage').then(function (cache) {
-      return cache.match(cle).then(function (reponse) {
-        if (!reponse) return false;
-        return reponse.json().then(function (donnees) {
-          cache.delete(cle);
-          var format = formatPourFichier(donnees.nom) || 'markdown';
-          if (format !== formatActif) choisirFormat(format);
-          ajouterRecent(donnees.nom, donnees.texte, format);
-          afficher(donnees.texte, donnees.nom, format);
-          return true;
+      // un livre partage arrive en binaire
+      return cache.match(cleLivre).then(function (livre) {
+        if (livre) {
+          var nom = decodeURIComponent(livre.headers.get('X-Nom') || 'livre.epub');
+          return livre.arrayBuffer().then(function (donnees) {
+            cache.delete(cleLivre);
+            var extrait = FORMATS.epub.extraire(donnees);
+            var titre = extrait.nom || nom;
+            if (formatActif !== 'epub') choisirFormat('epub');
+            ajouterRecent(titre, extrait.texte, 'epub');
+            afficher(extrait.texte, titre, 'epub');
+            return true;
+          });
+        }
+
+        return cache.match(cleTexte).then(function (reponse) {
+          if (!reponse) return false;
+          return reponse.json().then(function (donnees) {
+            cache.delete(cleTexte);
+            var format = formatPourFichier(donnees.nom) || 'markdown';
+            if (format !== formatActif) choisirFormat(format);
+            ajouterRecent(donnees.nom, donnees.texte, format);
+            afficher(donnees.texte, donnees.nom, format);
+            return true;
+          });
         });
       });
     }).catch(function () { return false; });
@@ -860,7 +1046,9 @@
     history.replaceState({ vue: 'accueil' }, '');
 
     reprendreAncienStockage();
-    choisirFormat(formatActif);
+    // on rouvre l'application sur le format quitte la derniere fois
+    var dernierFormat = lire(STORE.format);
+    choisirFormat(FORMATS[dernierFormat] ? dernierFormat : formatActif);
     appliquerEtat(history.state);
 
     recupererPartage().then(function (ok) {

@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v14';
+var VERSION = 'v17';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 
@@ -17,6 +17,8 @@ var FICHIERS = [
   './manifest.webmanifest',
   './vendor/marked.umd.js',
   './vendor/purify.min.js',
+  './vendor/fflate.umd.js',
+  './vendor/turndown.umd.js',
   './icons/logo.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -55,6 +57,19 @@ function traiterPartage(request) {
   return request.formData().then(function (form) {
     var fichiers = form.getAll('file');
     var fichier = fichiers && fichiers.length ? fichiers[0] : null;
+
+    // Un livre EPUB est une archive : on le garde tel quel, en binaire.
+    if (fichier && /\.epub$/i.test(fichier.name || '')) {
+      return caches.open(CACHE_PARTAGE).then(function (cache) {
+        return cache.put(new URL('__partage-livre__', self.registration.scope).href,
+          new Response(fichier, {
+            headers: {
+              'Content-Type': 'application/epub+zip',
+              'X-Nom': encodeURIComponent(fichier.name || 'livre.epub')
+            }
+          }));
+      });
+    }
 
     var lecture = fichier
       ? fichier.text().then(function (texte) {
