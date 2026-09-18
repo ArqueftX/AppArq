@@ -64,9 +64,10 @@
       accept: '.pdf,application/pdf',
       extensions: /\.pdf$/i,
       binaire: true,
+      pages: true,                  // la version propre affiche les vraies pages
       extraire: extrairePdf,
       rendu: function (texte) {
-        return nettoyerHtml(texte);
+        return nettoyerHtml(texte);  // secours, si le fichier n'est plus en memoire
       },
       source: function (texte) {
         return { texte: htmlVersMarkdown(texte), mention: 'Texte du PDF, converti en Markdown' };
@@ -187,9 +188,9 @@
   }
 
   // Un PDF ne connait que des morceaux de texte poses a des coordonnees :
-  // aucune notion de paragraphe ni de titre. On les reconstitue a partir des
-  // positions et des tailles de caracteres.
-  function pageEnHtml(contenu) {
+  // aucune notion de paragraphe, de titre ni de colonne. Tout est a
+  // reconstituer. Premiere etape : regrouper les morceaux en lignes.
+  function pageEnLignes(contenu) {
     var lignes = [];
 
     contenu.items.forEach(function (item) {
@@ -197,64 +198,100 @@
       var y = item.transform[5];
       var taille = Math.abs(item.transform[3]) || item.height || 12;
 
-      // on rattache le morceau a une ligne existante de meme hauteur
       var ligne = null;
       for (var i = lignes.length - 1; i >= 0 && i >= lignes.length - 3; i--) {
         if (Math.abs(lignes[i].y - y) <= Math.max(2, taille * 0.4)) { ligne = lignes[i]; break; }
       }
       if (!ligne) {
-        ligne = { y: y, taille: taille, morceaux: [] };
+        ligne = { y: y, taille: taille, morceaux: [], gauche: 1e9, droite: 0 };
         lignes.push(ligne);
       }
       ligne.taille = Math.max(ligne.taille, taille);
       ligne.morceaux.push({ x: item.transform[4], largeur: item.width || 0, texte: item.str });
-      ligne.gauche = Math.min(ligne.gauche === undefined ? 1e9 : ligne.gauche, item.transform[4]);
-      ligne.droite = Math.max(ligne.droite || 0, item.transform[4] + (item.width || 0));
+      ligne.gauche = Math.min(ligne.gauche, item.transform[4]);
+      ligne.droite = Math.max(ligne.droite, item.transform[4] + (item.width || 0));
     });
-
-    lignes.sort(function (a, b) { return b.y - a.y; });       // de haut en bas
 
     lignes.forEach(function (ligne) {
       ligne.morceaux.sort(function (a, b) { return a.x - b.x; });
       var texte = '';
       var finPrecedente = null;
       ligne.morceaux.forEach(function (morceau) {
-        // un ecart notable entre deux morceaux vaut une espace
         if (finPrecedente !== null && morceau.x - finPrecedente > ligne.taille * 0.2
             && !/\s$/.test(texte) && !/^\s/.test(morceau.texte)) texte += ' ';
         texte += morceau.texte;
         finPrecedente = morceau.x + morceau.largeur;
       });
       ligne.texte = texte.replace(/\s+/g, ' ').trim();
+      delete ligne.morceaux;
     });
 
-    lignes = lignes.filter(function (l) { return l.texte; });
+    return lignes.filter(function (l) { return l.texte; })
+                 .sort(function (a, b) { return b.y - a.y; });
+  }
+
+  // Deuxieme etape : remettre les lignes dans l'ordre de lecture. Sur deux
+  // colonnes, il faut lire la gauche en entier avant la droite — sinon on
+  // alterne une ligne sur deux et le texte devient illisible.
+  function ordonnerColonnes(lignes, largeurPage) {
+    if (lignes.length < 6 || !largeurPage) return lignes;
+
+    var pleineLargeur = function (l) { return (l.droite - l.gauche) > largeurPage * 0.6; };
+    var milieu = largeurPage / 2;
+    var aGauche = lignes.filter(function (l) { return !pleineLargeur(l) && l.droite < milieu * 1.04; });
+    var aDroite = lignes.filter(function (l) { return !pleineLargeur(l) && l.gauche > milieu * 0.96; });
+    var travers = lignes.filter(pleineLargeur);
+
+    // deux colonnes bien garnies, et peu de lignes a cheval : c'est un texte
+    // sur deux colonnes
+    var deuxColonnes = aGauche.length >= 3 && aDroite.length >= 3
+      && (aGauche.length + aDroite.length) >= lignes.length * 0.7;
+    if (!deuxColonnes) return lignes;
+
+    // Une ligne qui traverse toute la largeur (un titre) separe deux zones :
+    // on vide la zone en cours avant de la franchir.
+    var sortie = [];
+    var zone = [];
+    var vider = function () {
+      if (!zone.length) return;
+      var g = zone.filter(function (l) { return l.droite < milieu * 1.04; });
+      var d = zone.filter(function (l) { return l.droite >= milieu * 1.04; });
+      sortie = sortie.concat(g, d);
+      zone = [];
+    };
+
+    lignes.forEach(function (ligne) {
+      if (pleineLargeur(ligne)) { vider(); sortie.push(ligne); }
+      else zone.push(ligne);
+    });
+    vider();
+    return sortie;
+  }
+
+  // Troisieme etape : des lignes ordonnees aux titres, paragraphes et listes.
+  function lignesEnHtml(lignes) {
     if (!lignes.length) return '';
 
-    // taille de caractere la plus courante : c'est celle du corps de texte
     var tailles = lignes.map(function (l) { return l.taille; }).sort(function (a, b) { return a - b; });
     var corps = tailles[Math.floor(tailles.length / 2)] || 12;
 
-    // Marge droite de la page, et texte justifie ou non : dans un texte
-    // justifie, une ligne qui s'arrete avant la marge termine forcement son
-    // paragraphe. Dans un texte en drapeau, toutes les lignes s'arretent avant
-    // la marge : le signal ne vaut rien et on ne s'en sert pas.
     var margeDroite = lignes.reduce(function (m, l) { return Math.max(m, l.droite || 0); }, 0);
     var pleines = lignes.filter(function (l) { return l.droite >= margeDroite * 0.95; }).length;
     var justifie = lignes.length > 4 && pleines / lignes.length > 0.55;
 
-    // regroupement en blocs : un saut vertical, un changement de taille ou une
-    // ligne courte marquent un nouveau paragraphe
     var blocs = [];
     var courant = null;
     lignes.forEach(function (ligne, i) {
       var niveau = ligne.taille > corps * 1.45 ? 1 : (ligne.taille > corps * 1.15 ? 2 : 0);
       var precedente = i > 0 ? lignes[i - 1] : null;
-      var ecart = precedente ? precedente.y - ligne.y : 0;
-      var ligneCourte = justifie && precedente && precedente.droite < margeDroite * 0.88;
+      // un changement de colonne remet le compteur a zero
+      var memeColonne = precedente && Math.abs(precedente.gauche - ligne.gauche) < corps * 6;
+      var ecart = precedente && memeColonne ? precedente.y - ligne.y : 1e9;
+      var ligneCourte = justifie && precedente && memeColonne
+                        && precedente.droite < margeDroite * 0.88;
 
       if (!courant || niveau !== courant.niveau || ecart > ligne.taille * 1.9 || ligneCourte) {
-        courant = { niveau: niveau, lignes: [], gauche: ligne.gauche };
+        courant = { niveau: niveau, lignes: [] };
         blocs.push(courant);
       }
       courant.lignes.push(ligne.texte);
@@ -266,8 +303,6 @@
       if (bloc.niveau === 1) return '<h1>' + echapper(assembler(bloc.lignes)) + '</h1>';
       if (bloc.niveau === 2) return '<h2>' + echapper(assembler(bloc.lignes)) + '</h2>';
 
-      // liste a puces : chaque puce ouvre un element, les lignes suivantes
-      // prolongent le precedent
       if (bloc.lignes.some(function (l) { return puce.test(l); })) {
         var elements = [];
         bloc.lignes.forEach(function (ligne) {
@@ -284,9 +319,143 @@
     }).join('\n');
   }
 
+  // Les en-tetes et pieds de page se repetent a l'identique : on les reconnait
+  // en comparant la premiere et la derniere ligne de chaque page.
+  function retirerBandeaux(pages) {
+    var numeroSeul = /^\s*(page\s*)?[-–—(\[]?\s*\d{1,4}\s*(\/\s*\d{1,4})?\s*[-–—)\]]?\s*$/i;
+    var normaliser = function (t) { return t.replace(/\d+/g, '#').toLowerCase().trim(); };
+
+    // Un numero de page seul, en haut ou en bas, n'apporte rien au texte.
+    pages.forEach(function (lignes) {
+      if (lignes.length > 1 && numeroSeul.test(lignes[lignes.length - 1].texte)) lignes.pop();
+      if (lignes.length > 1 && numeroSeul.test(lignes[0].texte)) lignes.shift();
+    });
+
+    if (pages.length < 2) return;
+    var seuil = Math.max(2, Math.ceil(pages.length * 0.6));
+
+    // Une meme ligne en tete (ou en pied) de la plupart des pages est un
+    // bandeau, pas du texte : on la retire partout ou elle apparait.
+    [0, -1].forEach(function (bout) {
+      var comptes = {};
+      pages.forEach(function (lignes) {
+        if (!lignes.length) return;
+        var ligne = bout === 0 ? lignes[0] : lignes[lignes.length - 1];
+        var cle = normaliser(ligne.texte);
+        comptes[cle] = (comptes[cle] || 0) + 1;
+      });
+
+      pages.forEach(function (lignes) {
+        if (lignes.length < 2) return;
+        var indice = bout === 0 ? 0 : lignes.length - 1;
+        if (comptes[normaliser(lignes[indice].texte)] >= seuil) lignes.splice(indice, 1);
+      });
+    });
+  }
+
+  /* ----- affichage fidele des pages ---------------------------------- */
+
+  var pdfEnCours = null;
+
+  function arreterPdf() {
+    if (!pdfEnCours) return;
+    if (pdfEnCours.observateur) pdfEnCours.observateur.disconnect();
+    try { pdfEnCours.doc.destroy(); } catch (e) {}
+    pdfEnCours = null;
+  }
+
+  // L'echelle du texte invisible doit suivre la largeur affichee de la page.
+  function majEchelle(cadre) {
+    if (!cadre.__vue || !cadre.clientWidth) return;
+    cadre.style.setProperty('--total-scale-factor', cadre.clientWidth / cadre.__vue.width);
+  }
+
+  function dessinerPage(cadre) {
+    if (cadre.__enCours || cadre.querySelector('canvas')) { majEchelle(cadre); return; }
+    cadre.__enCours = true;
+
+    var vue = cadre.__vue;
+    var largeur = cadre.clientWidth || 700;
+    var densite = Math.min(2, window.devicePixelRatio || 1);
+    var rendu = cadre.__page.getViewport({ scale: Math.min((largeur * densite) / vue.width, 4) });
+
+    var toile = document.createElement('canvas');
+    toile.width = Math.floor(rendu.width);
+    toile.height = Math.floor(rendu.height);
+    cadre.insertBefore(toile, cadre.firstChild);
+    majEchelle(cadre);
+
+    cadre.__page.render({ canvasContext: toile.getContext('2d', { alpha: false }), viewport: rendu })
+      .promise.then(function () { cadre.__enCours = false; })
+      .catch(function () { cadre.__enCours = false; });
+  }
+
+  // Une page loin de l'ecran rend son image : seul le texte invisible reste,
+  // pour que la recherche et la selection continuent de porter sur tout le
+  // document.
+  function effacerPage(cadre) {
+    var toile = cadre.querySelector('canvas');
+    if (toile && !cadre.__enCours) toile.remove();
+  }
+
+  function rendrePages(conteneur, donnees) {
+    arreterPdf();
+    conteneur.innerHTML = '';
+    conteneur.classList.add('pages-pdf');
+
+    return chargerPdfjs().then(function (bib) {
+      return bib.getDocument({ data: new Uint8Array(donnees.slice(0)) }).promise.then(function (doc) {
+        var observateur = new IntersectionObserver(function (entrees) {
+          entrees.forEach(function (entree) {
+            if (entree.isIntersecting) dessinerPage(entree.target);
+            else effacerPage(entree.target);
+          });
+        }, { rootMargin: '200% 0px' });
+        pdfEnCours = { doc: doc, observateur: observateur };
+
+        var suite = Promise.resolve();
+        for (var n = 1; n <= doc.numPages; n++) {
+          (function (numero) {
+            suite = suite.then(function () {
+              if (!pdfEnCours || pdfEnCours.doc !== doc) return;    // document abandonne
+              return doc.getPage(numero).then(function (page) {
+                var vue = page.getViewport({ scale: 1 });
+                var cadre = document.createElement('div');
+                cadre.className = 'page-pdf';
+                cadre.style.aspectRatio = vue.width + ' / ' + vue.height;
+                cadre.__page = page;
+                cadre.__vue = vue;
+                conteneur.appendChild(cadre);
+                majEchelle(cadre);
+
+                var couche = document.createElement('div');
+                couche.className = 'texte-pdf';
+                cadre.appendChild(couche);
+
+                return page.getTextContent().then(function (contenu) {
+                  return new bib.TextLayer({
+                    textContentSource: contenu, container: couche, viewport: vue
+                  }).render();
+                }).then(function () {
+                  observateur.observe(cadre);
+                  if (numero <= 2) dessinerPage(cadre);      // les premieres tout de suite
+                });
+              });
+            });
+          })(n);
+        }
+        return suite.then(function () { mesurerHauteur(); });
+      });
+    });
+  }
+
+  window.addEventListener('resize', function () {
+    document.querySelectorAll('.page-pdf').forEach(majEchelle);
+  });
+
   function extrairePdf(donnees, avancement) {
     return chargerPdfjs().then(function (bibliotheque) {
-      return bibliotheque.getDocument({ data: new Uint8Array(donnees) }).promise;
+      return bibliotheque.getDocument({ data: new Uint8Array(donnees.slice(0)) }).promise;
     }).then(function (document_) {
       var pages = [];
       var suite = Promise.resolve();
@@ -295,9 +464,12 @@
         (function (numero) {
           suite = suite.then(function () {
             if (avancement) avancement(numero, document_.numPages);
-            return document_.getPage(numero)
-              .then(function (page) { return page.getTextContent(); })
-              .then(function (contenu) { pages[numero - 1] = pageEnHtml(contenu); });
+            return document_.getPage(numero).then(function (page) {
+              var largeur = page.getViewport({ scale: 1 }).width;
+              return page.getTextContent().then(function (contenu) {
+                pages[numero - 1] = { lignes: pageEnLignes(contenu), largeur: largeur };
+              });
+            });
           });
         })(n);
       }
@@ -305,7 +477,11 @@
       return suite.then(function () {
         return document_.getMetadata().catch(function () { return { info: {} }; });
       }).then(function (donneesDoc) {
-        var html = pages.filter(Boolean).join('\n<hr />\n');
+        var utiles = pages.filter(Boolean);
+        retirerBandeaux(utiles.map(function (p) { return p.lignes; }));
+        var html = utiles.map(function (p) {
+          return lignesEnHtml(ordonnerColonnes(p.lignes, p.largeur));
+        }).filter(function (h) { return h; }).join('\n<hr />\n');
         // un PDF scanne ne contient que des images : rien a extraire
         if (html.replace(/<[^>]*>/g, '').trim().length < document_.numPages * 8) {
           throw new Error('pdf sans texte');
@@ -412,6 +588,72 @@
   var MAX_UN_FICHIER = 400000;    // au-dela, le contenu n'est pas memorise
   var BUDGET_TOTAL = 2000000;     // place totale allouee aux contenus
 
+  /* ----- coffre a fichiers -------------------------------------------
+     localStorage ne stocke que du texte, et seulement quelques megaoctets.
+     Les fichiers d'origine (PDF, EPUB) vont donc dans IndexedDB, ce qui
+     permet de reafficher un PDF page par page sans redemander le fichier. */
+
+  var MAX_FICHIER_GARDE = 60 * 1024 * 1024;   // 60 Mo
+  var base = null;
+
+  function coffre() {
+    if (base) return base;
+    base = new Promise(function (resoudre, rejeter) {
+      if (!window.indexedDB) { rejeter(); return; }
+      var demande = indexedDB.open('apparq', 1);
+      demande.onupgradeneeded = function () {
+        demande.result.createObjectStore('fichiers');
+      };
+      demande.onsuccess = function () { resoudre(demande.result); };
+      demande.onerror = function () { rejeter(demande.error); };
+    }).catch(function () { return null; });
+    return base;
+  }
+
+  function rangerFichier(cle, donnees) {
+    if (!donnees || donnees.byteLength > MAX_FICHIER_GARDE) return Promise.resolve(false);
+    return coffre().then(function (bd) {
+      if (!bd) return false;
+      return new Promise(function (resoudre) {
+        try {
+          var t = bd.transaction('fichiers', 'readwrite');
+          t.objectStore('fichiers').put(donnees, cle);
+          t.oncomplete = function () { resoudre(true); };
+          t.onerror = function () { resoudre(false); };
+        } catch (e) { resoudre(false); }
+      });
+    });
+  }
+
+  function sortirFichier(cle) {
+    return coffre().then(function (bd) {
+      if (!bd) return null;
+      return new Promise(function (resoudre) {
+        try {
+          var d = bd.transaction('fichiers', 'readonly').objectStore('fichiers').get(cle);
+          d.onsuccess = function () { resoudre(d.result || null); };
+          d.onerror = function () { resoudre(null); };
+        } catch (e) { resoudre(null); }
+      });
+    });
+  }
+
+  // On ne garde que les fichiers encore presents dans l'historique.
+  function fairePlace(clesVivantes) {
+    return coffre().then(function (bd) {
+      if (!bd) return;
+      try {
+        var magasin = bd.transaction('fichiers', 'readwrite').objectStore('fichiers');
+        var toutes = magasin.getAllKeys();
+        toutes.onsuccess = function () {
+          toutes.result.forEach(function (cle) {
+            if (clesVivantes.indexOf(cle) === -1) magasin.delete(cle);
+          });
+        };
+      } catch (e) { /* tant pis */ }
+    });
+  }
+
   function lire(cle) {
     try { return localStorage.getItem(cle); } catch (e) { return null; }
   }
@@ -453,7 +695,7 @@
     return essai;
   }
 
-  function ajouterRecent(nom, texte, format) {
+  function ajouterRecent(nom, texte, format, tailleOctets) {
     var liste = listeRecents().filter(function (f) {
       return !(f.nom === nom && f.format === format);
     });
@@ -462,7 +704,7 @@
       id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7),
       format: format,
       nom: nom,
-      taille: texte.length,
+      taille: tailleOctets || texte.length,
       date: Date.now(),
       texte: texte.length <= MAX_UN_FICHIER ? texte : null
     });
@@ -477,12 +719,16 @@
       else total += liste[i].texte.length;
     }
 
-    sauverRecents(liste);
+    var gardees = sauverRecents(liste);
+    fairePlace((gardees || liste).map(function (f) { return f.id; }));
     majAccueil();
+    return liste[0];
   }
 
   function retirerRecent(id) {
-    sauverRecents(listeRecents().filter(function (f) { return f.id !== id; }));
+    var restants = listeRecents().filter(function (f) { return f.id !== id; });
+    sauverRecents(restants);
+    fairePlace(restants.map(function (f) { return f.id; }));
     majAccueil();
   }
 
@@ -661,7 +907,7 @@
       var meta = document.createElement('span');
       meta.className = 'recent-meta';
       meta.textContent = quand(fichier.date) + ' · ' + tailleLisible(fichier.taille)
-                       + (fichier.texte ? '' : ' · à rouvrir');
+                       + (fichier.texte || FORMATS[fichier.format].pages ? '' : ' · à rouvrir');
 
       ouvrir.appendChild(nom);
       ouvrir.appendChild(meta);
@@ -697,6 +943,20 @@
   function rouvrir(id, terme) {
     var fichier = listeRecents().filter(function (f) { return f.id === id; })[0];
     if (!fichier) return;
+
+    // un PDF est rouvert depuis le fichier lui-meme, garde dans le coffre
+    if (FORMATS[fichier.format].pages) {
+      sortirFichier(id).then(function (donnees) {
+        if (donnees) {
+          afficher('', fichier.nom, fichier.format, terme, donnees);
+        } else {
+          toast("Ce PDF n'est plus en mémoire : ouvre-le à nouveau.");
+          elInput.click();
+        }
+      });
+      return;
+    }
+
     if (!fichier.texte) {
       toast('Ce fichier était trop volumineux pour être gardé en mémoire : ouvre-le à nouveau.');
       elInput.click();
@@ -715,8 +975,6 @@
   var elSourceTexte = $('#source-texte');
 
   var texteOriginal = '';      // le fichier tel qu'il a ete ouvert, intact
-  var htmlRendu  = null;       // instantanes sans surlignage, pour la recherche
-  var htmlSource = null;
   var elTitre     = $('#doc-title');
   var elProgress = $('#progress');
   var elToTop    = $('#to-top');
@@ -759,41 +1017,75 @@
     elSourceTexte.appendChild(fragment);
   }
 
-  function afficher(texte, nomFichier, format, terme) {
+  var sourceEnCours = 0;
+
+  // Pour un PDF, le texte de la vue brute est prepare en arriere-plan :
+  // les pages s'affichent tout de suite, sans attendre l'extraction.
+  function preparerSourceDifferee(reglages, donnees) {
+    var jeton = ++sourceEnCours;
+    texteOriginal = '';
+    elSourceTexte.textContent = 'Préparation du texte…';
+    $('.source-mention').textContent = 'Texte en cours de préparation';
+
+    Promise.resolve(reglages.extraire(donnees)).then(function (extrait) {
+      if (jeton !== sourceEnCours) return;
+      var brut = reglages.source(extrait.texte);
+      texteOriginal = brut.texte;
+      remplirTexteBrut(brut.texte);
+      $('.source-mention').textContent = brut.mention;
+    }).catch(function (e) {
+      if (jeton !== sourceEnCours) return;
+      elSourceTexte.textContent = /sans texte/.test((e && e.message) || '')
+        ? "Ce PDF ne contient pas de texte : il a sans doute été scanné."
+        : "Le texte de ce PDF n'a pas pu être extrait.";
+      $('.source-mention').textContent = 'Texte indisponible';
+    });
+  }
+
+  function afficher(texte, nomFichier, format, terme, donnees) {
     var reglages = FORMATS[format || formatActif];
-    var html;
-    try {
-      html = reglages.rendu(texte);
-    } catch (e) {
-      toast("Ce fichier n'a pas pu être affiché.");
-      return;
+    sourceEnCours++;                       // annule une preparation en cours
+    arreterPdf();
+    elDoc.classList.remove('pages-pdf');
+
+    if (reglages.pages && donnees) {
+      // version propre : le document tel qu'il est, page par page
+      elDoc.innerHTML = '';
+      rendrePages(elDoc, donnees).catch(function () {
+        toast("Ce PDF n'a pas pu être affiché.");
+      });
+      preparerSourceDifferee(reglages, donnees);
+    } else {
+      var html;
+      try {
+        html = reglages.rendu(texte);
+      } catch (e) {
+        toast("Ce fichier n'a pas pu être affiché.");
+        return;
+      }
+
+      elDoc.innerHTML = html;
+
+      elDoc.querySelectorAll('a[href]').forEach(function (a) {
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+      });
+
+      elDoc.querySelectorAll('table').forEach(function (table) {
+        if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        table.parentNode.insertBefore(wrap, table);
+        wrap.appendChild(table);
+      });
+
+      // La seconde vue : le fichier tel quel pour le Markdown, le Markdown
+      // reconstruit pour les autres formats.
+      var brut = reglages.source(texte);
+      texteOriginal = brut.texte;
+      remplirTexteBrut(brut.texte);
+      $('.source-mention').textContent = brut.mention;
     }
-
-    elDoc.innerHTML = html;
-
-    elDoc.querySelectorAll('a[href]').forEach(function (a) {
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-    });
-
-    elDoc.querySelectorAll('table').forEach(function (table) {
-      if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
-      var wrap = document.createElement('div');
-      wrap.className = 'table-wrap';
-      table.parentNode.insertBefore(wrap, table);
-      wrap.appendChild(table);
-    });
-
-    // La seconde vue : le fichier tel quel pour le Markdown, le Markdown
-    // reconstruit pour le HTML.
-    var brut = reglages.source(texte);
-    texteOriginal = brut.texte;
-    remplirTexteBrut(brut.texte);
-    $('.source-mention').textContent = brut.mention;
-
-    // On garde le HTML propre : la recherche le reconstruit a chaque frappe.
-    htmlRendu = elDoc.innerHTML;
-    htmlSource = elSourceTexte.innerHTML;
 
     // Le bouton Retour d'Android doit ramener a l'accueil, pas fermer l'app.
     if (history.state && history.state.menu) history.replaceState({ vue: 'accueil' }, '');
@@ -836,13 +1128,22 @@
           }));
 
     lecture.then(function (contenu) {
+      // Un PDF s'affiche tel quel : on garde le fichier lui-meme, et il n'y a
+      // rien a extraire avant l'affichage.
+      if (reglages.pages) {
+        var entree = ajouterRecent(nom, '', format, contenu.byteLength);
+        rangerFichier(entree.id, contenu.slice(0));
+        afficher('', nom, format, null, contenu);
+        return null;
+      }
       if (!reglages.binaire) return { texte: contenu };
-      // l'extraction peut etre longue (un PDF de 300 pages) : on tient au courant
+      // l'extraction peut etre longue : on tient au courant
       toast('Lecture de « ' + nom +' »…');
       return reglages.extraire(contenu, function (page, total) {
         if (total > 4 && page % 5 === 1) toast('Lecture… page ' + page + ' sur ' + total);
       });
     }).then(function (extrait) {
+      if (!extrait) return;
       if (extrait.nom) nom = extrait.nom;
       ajouterRecent(nom, extrait.texte, format);
       afficher(extrait.texte, nom, format);
@@ -971,10 +1272,14 @@
   }
 
   function restaurerDocument() {
-    if (marques.length) {
-      if (htmlRendu !== null) elDoc.innerHTML = htmlRendu;
-      if (htmlSource !== null) elSourceTexte.innerHTML = htmlSource;
-    }
+    // On retire les <mark> un a un et on recolle les morceaux de texte.
+    // Remplacer le HTML entier effacerait les pages de PDF deja dessinees.
+    marques.forEach(function (marque) {
+      var parent = marque.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(marque.textContent), marque);
+      parent.normalize();
+    });
     marques = [];
     indexMarque = 0;
   }
@@ -1207,6 +1512,13 @@
           return livre.arrayBuffer().then(function (donnees) {
             cache.delete(cleLivre);
             var format = formatPourFichier(nom) || 'epub';
+            if (FORMATS[format].pages) {
+              if (formatActif !== format) choisirFormat(format);
+              var entree = ajouterRecent(nom, '', format, donnees.byteLength);
+              rangerFichier(entree.id, donnees.slice(0));
+              afficher('', nom, format, null, donnees);
+              return true;
+            }
             return Promise.resolve(FORMATS[format].extraire(donnees)).then(function (extrait) {
               var titre = extrait.nom || nom;
               if (formatActif !== format) choisirFormat(format);

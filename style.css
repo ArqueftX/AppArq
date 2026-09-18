@@ -445,6 +445,56 @@ main {
   body[data-vue="accueil"] #btn-menu { display: none; }
 }
 
+/* ----- pages de PDF, affichees telles quelles ----- */
+.pages-pdf { padding-bottom: 20vh; }
+
+.page-pdf {
+  position: relative;
+  width: 100%;
+  margin: 0 auto 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.page-pdf canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* le texte du PDF, invisible, pose exactement sur l'image : c'est lui qui
+   rend la selection, la copie et la recherche possibles */
+.texte-pdf {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.texte-pdf span,
+.texte-pdf br {
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0 0;
+  color: transparent;
+}
+.texte-pdf ::selection { background: color-mix(in srgb, var(--accent) 42%, transparent); }
+.texte-pdf mark.surlignage {
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+  color: transparent;
+  border-radius: 2px;
+}
+.texte-pdf mark.surlignage.actif {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+  color: transparent;
+}
+
 /* ----- texte d'origine ----- */
 .source {
   -webkit-user-select: text;
