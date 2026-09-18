@@ -1377,6 +1377,27 @@
   /* 9. Navigation (fleche retour, bouton Retour d'Android)      */
   /* ----------------------------------------------------------- */
 
+  // Une nouvelle version peut arriver a tout moment. La page ne se recharge
+  // jamais pendant que l'on s'en sert : recharger en pleine selection ferait
+  // disparaitre le travail en cours. On attend que l'application passe en
+  // arriere-plan, ou qu'elle revienne a l'accueil.
+  var majEnAttente = false;
+  var rechargeFaite = false;
+
+  function rechargerSiPossible() {
+    if (!majEnAttente || rechargeFaite) return;
+
+    var selection = window.getSelection();
+    var occupe = (selection && !selection.isCollapsed)
+              || (elRecherche && !elRecherche.hidden);
+
+    if (document.hidden) { rechargeFaite = true; location.reload(); return; }
+    if (document.body.dataset.vue === 'accueil' && !occupe) {
+      rechargeFaite = true;
+      location.reload();
+    }
+  }
+
   var vuePrecedente = null;
 
   function appliquerEtat(etat) {
@@ -1403,6 +1424,7 @@
       document.title = 'AppArq — Lecteur Markdown';
       majAccueil();
       window.scrollTo(0, 0);
+      rechargerSiPossible();      // moment sans risque pour une mise a jour
     }
     mesurerHauteur();
     majProgression();
@@ -1471,6 +1493,15 @@
     var montrer = enLecture && window.scrollY >= 600;
     if (montrer === elToTop.hidden) elToTop.hidden = !montrer;
   }
+
+  // Tant qu'une selection est en cours, aucun element flottant ne doit
+  // apparaitre en bas de l'ecran : la poignee de selection y passe, et
+  // rencontrer une zone non selectionnable annule la selection.
+  document.addEventListener('selectionchange', function () {
+    var selection = window.getSelection();
+    var enCours = !!(selection && !selection.isCollapsed);
+    document.body.classList.toggle('selection-en-cours', enCours);
+  });
 
   window.addEventListener('scroll', majProgression, { passive: true });
   window.addEventListener('resize', function () { mesurerHauteur(); majProgression(); });
@@ -1572,12 +1603,15 @@
     // Si oui, un changement de pilote signifie qu'une nouvelle version vient
     // d'etre installee : la page en cours execute encore l'ancien code.
     var deja = !!navigator.serviceWorker.controller;
-    var rechargeFaite = false;
 
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (!deja || rechargeFaite) return;
-      rechargeFaite = true;
-      location.reload();
+      majEnAttente = true;
+      rechargerSiPossible();
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) rechargerSiPossible();
     });
 
     window.addEventListener('load', function () {

@@ -621,6 +621,12 @@ main {
 .to-top svg { width: 22px; height: 22px; fill: currentColor; }
 .to-top[hidden], body[data-vue="accueil"] .to-top { display: none; }
 
+/* Pendant une selection, on efface tout ce qui flotte au-dessus du texte :
+   le bouton « retour en haut » surgissait a 14 px du bord bas, exactement la
+   ou passe la poignee quand on tire vers le bas, et la selection etait perdue. */
+body.selection-en-cours .to-top,
+body.selection-en-cours .toast { display: none !important; }
+
 /* ----- petit message temporaire ----- */
 .toast {
   position: fixed;

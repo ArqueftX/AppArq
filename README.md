@@ -104,7 +104,9 @@ s'ouvrira dessus. Au premier document lu, un message signale le bouton.
 
 **Copier du texte** : toute la colonne de lecture est sélectionnable, avec de la
 marge sous la dernière ligne pour que la poignée ait toujours du terrain sous
-elle. En revanche la barre du haut, le menu et les boutons ne le sont pas : la
+elle. Tant qu'une sélection est en cours, le bouton « retour en haut » et les
+messages éphémères disparaissent : ils surgissaient en bas de l'écran, juste sous
+le doigt qui tire la poignée, et la sélection était perdue au passage. En revanche la barre du haut, le menu et les boutons ne le sont pas : la
 sélection ne peut donc pas déborder sur l'habillage, et « Tout sélectionner » ne
 prend que le document.
 
@@ -206,11 +208,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=14` → `style.css?v=15` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v19';` → `'v20'`.
+> 1. dans `index.html` : `style.css?v=16` → `style.css?v=17` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v22';` → `'v23'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=15` est une adresse qu'il n'a jamais vue.
+> `style.css?v=17` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
