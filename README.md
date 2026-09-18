@@ -55,6 +55,11 @@ dans l'application. La croix à droite retire une ligne de la liste.
 La recherche ne tient pas compte des majuscules, mais elle est sensible aux
 accents : « reunion » ne trouvera pas « réunion ».
 
+**Copier du texte** : seul le texte du document est sélectionnable. La barre du
+haut, le menu et les boutons ne le sont pas, ce qui évite que la sélection
+déborde sur toute la page quand on tire la poignée au-delà du texte. « Tout
+sélectionner » ne prend que le document, jamais l'habillage de l'application.
+
 **Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour*
 d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 
@@ -134,11 +139,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=6` → `style.css?v=7` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v7';` → `'v8'`.
+> 1. dans `index.html` : `style.css?v=7` → `style.css?v=8` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v8';` → `'v9'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=7` est une adresse qu'il n'a jamais vue.
+> `style.css?v=8` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
