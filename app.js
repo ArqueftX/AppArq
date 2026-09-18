@@ -379,7 +379,9 @@
   // navigateur a parcourir tout le document a chaque appui long : la selection
   // mettait un temps fou a demarrer sur telephone (18 ms contre 3 ms en mise en
   // page, sur un fichier de 172 Ko).
-  var LIGNES_PAR_BLOC = 20;
+  // Taille choisie par la mesure : au-dela, l'appui long ralentit ; en deca,
+  // c'est le glissement de la selection vers le bas qui devient couteux.
+  var LIGNES_PAR_BLOC = 400;
 
   function remplirTexteBrut(texte) {
     var lignes = texte.split('\n');
@@ -869,10 +871,31 @@
   demarrer();
 
   if ('serviceWorker' in navigator) {
+    // L'application etait-elle deja pilotee par un service worker au chargement ?
+    // Si oui, un changement de pilote signifie qu'une nouvelle version vient
+    // d'etre installee : la page en cours execute encore l'ancien code.
+    var deja = !!navigator.serviceWorker.controller;
+    var rechargeFaite = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!deja || rechargeFaite) return;
+      rechargeFaite = true;
+      location.reload();
+    });
+
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(function () {
-        /* pas bloquant : l'app marche, simplement pas hors connexion */
-      });
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+        .then(function (enregistrement) {
+          // A chaque retour dans l'application, on verifie s'il existe une
+          // version plus recente. Sans cela, une application installee peut
+          // tourner des jours sur du code perime.
+          document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) enregistrement.update();
+          });
+        })
+        .catch(function () {
+          /* pas bloquant : l'app marche, simplement pas hors connexion */
+        });
     });
   }
 })();

@@ -150,12 +150,19 @@ Quelques exemples faciles pour commencer :
   entrée, ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil,
   l'historique et la détection par extension s'adaptent tout seuls.
 
+> **Mise à jour de l'application installée** : depuis la v14, l'application
+> vérifie s'il existe une version plus récente chaque fois que tu reviens
+> dessus, et se recharge toute seule le cas échéant. Avant cette version, une
+> application installée pouvait tourner des jours sur du code périmé sans le
+> signaler — si c'est ton cas, ferme-la complètement (balaye-la des
+> applications récentes) et rouvre-la une fois.
+
 > ⚠️ **Après chaque modification de `style.css` ou `app.js`**, change le numéro
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
 > 1. dans `index.html` : `style.css?v=12` → `style.css?v=13` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v13';` → `'v14'`.
+> 2. dans `sw.js` : `var VERSION = 'v14';` → `'v15'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
 > `style.css?v=13` est une adresse qu'il n'a jamais vue.
