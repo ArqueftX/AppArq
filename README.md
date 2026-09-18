@@ -102,7 +102,24 @@ accents : « reunion » ne trouvera pas « réunion ».
 Ton choix est mémorisé : si tu préfères toujours le texte brut, l'application
 s'ouvrira dessus. Au premier document lu, un message signale le bouton.
 
-**Copier du texte** : toute la colonne de lecture est sélectionnable, avec de la
+**Copier un passage sans tirer de poignée** (bouton 📋 pendant la lecture) : un
+assistant en deux étapes, pensé pour le téléphone où la sélection à la main est
+pénible sur un long texte.
+
+1. Tu écris **par quels mots le passage commence**. L'application vérifie qu'ils
+   sont bien dans le document. Les accents et les majuscules n'ont pas
+   d'importance, et les retours à la ligne du document non plus.
+2. Si ces mots apparaissent à plusieurs endroits, elle te montre chaque
+   occurrence avec le texte autour, et tu désignes la bonne.
+3. Tu écris ensuite **par quels mots il se termine** — recherchés seulement
+   après le début choisi, avec la même demande de précision si besoin.
+4. Elle affiche le passage repéré (nombre de mots et de caractères, début et
+   fin), et un appui sur **Copier** le met dans le presse-papier.
+
+Le passage copié correspond à la vue affichée : en mise en page propre tu
+obtiens le texte sans les marqueurs, en texte brut tu les obtiens avec.
+
+**Copier du texte à la main** : toute la colonne de lecture est sélectionnable, avec de la
 marge sous la dernière ligne pour que la poignée ait toujours du terrain sous
 elle. Tant qu'une sélection est en cours, le bouton « retour en haut » et les
 messages éphémères disparaissent : ils surgissaient en bas de l'écran, juste sous
@@ -125,8 +142,8 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | 🔍 | Rechercher : dans les fichiers sur l'accueil, dans le texte pendant la lecture |
 | `‹ ›` | Basculer entre mise en page propre et texte brut (pendant la lecture) |
 | 📁 | Ouvrir un fichier (sur l'accueil) |
-| A− / A+ | Réduire ou agrandir le texte (mémorisé) |
-| 🌗 | Basculer entre thème automatique, clair et sombre |
+| 📋 | Copier un passage en le désignant par ses mots (pendant la lecture) |
+| ⋮ | Réglages : taille du texte et thème |
 
 Les 15 derniers fichiers restent proposés sur l'accueil, même après avoir fermé
 l'application. Les textes sont gardés jusqu'à environ 2 Mo au total : au-delà,
@@ -208,11 +225,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=16` → `style.css?v=17` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v22';` → `'v23'`.
+> 1. dans `index.html` : `style.css?v=17` → `style.css?v=18` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v23';` → `'v24'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=17` est une adresse qu'il n'a jamais vue.
+> `style.css?v=18` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

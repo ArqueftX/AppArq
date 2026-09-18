@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=16">
+<link rel="stylesheet" href="./style.css?v=17">
 </head>
 <body data-vue="accueil">
 
@@ -34,17 +34,22 @@
     <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier" title="Ouvrir un fichier">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
     </button>
-    <button id="btn-smaller" class="icon-btn reglage-texte" aria-label="Réduire la taille du texte" title="Texte plus petit">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A-</text></svg>
+    <button id="btn-copier-passage" class="icon-btn lecture-seule" aria-label="Copier un passage" title="Copier un passage">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h7a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-1H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1V4a2 2 0 0 1 2-2zm0 2v1h7V4H9zM6 7v11h1V7H6zm3 0v13h10V7H9z"/></svg>
     </button>
-    <button id="btn-bigger" class="icon-btn reglage-texte" aria-label="Augmenter la taille du texte" title="Texte plus grand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="15" font-family="system-ui, sans-serif" font-weight="600">A+</text></svg>
-    </button>
-    <button id="btn-theme" class="icon-btn" aria-label="Changer le thème" title="Thème">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    <button id="btn-plus" class="icon-btn" aria-label="Réglages" aria-expanded="false" title="Réglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
     </button>
   </div>
 </header>
+
+<div id="panneau-plus" class="panneau" hidden>
+  <button id="btn-smaller" class="ligne-panneau reglage-texte" type="button">Texte plus petit</button>
+  <button id="btn-bigger" class="ligne-panneau reglage-texte" type="button">Texte plus grand</button>
+  <button id="btn-theme" class="ligne-panneau" type="button">
+    <span id="etiquette-theme">Thème : automatique</span>
+  </button>
+</div>
 
 <div id="recherche" class="recherche" role="search" hidden>
   <svg class="recherche-loupe" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 0 1 4.6 9.9l5.1 5.1-1.4 1.4-5.1-5.1A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
@@ -123,12 +128,34 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 7h-4v7h-6v-7H5z"/></svg>
 </button>
 
+<!-- ===================== ASSISTANT DE COPIE ===================== -->
+<div id="copie" class="feuille" hidden>
+  <div class="feuille-fond" id="copie-fond"></div>
+  <div class="feuille-corps" role="dialog" aria-modal="true" aria-labelledby="copie-titre">
+    <h2 class="feuille-titre" id="copie-titre">Copier un passage</h2>
+    <p class="feuille-etape" id="copie-etape">Étape 1 sur 2</p>
+    <p class="feuille-question" id="copie-question">Par quels mots le passage commence-t-il ?</p>
+
+    <input id="copie-champ" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Les premiers mots du passage" aria-describedby="copie-question">
+
+    <p class="feuille-message" id="copie-message" hidden></p>
+    <ul class="feuille-choix" id="copie-choix" hidden></ul>
+    <div class="feuille-apercu" id="copie-apercu" hidden></div>
+
+    <div class="feuille-actions">
+      <button id="copie-annuler" class="secondaire" type="button">Annuler</button>
+      <button id="copie-valider" class="primary-btn" type="button">Continuer</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
 <script src="./vendor/fflate.umd.js"></script>
 <script src="./vendor/turndown.umd.js"></script>
-<script src="./app.js?v=19"></script>
+<script src="./app.js?v=20"></script>
 </body>
 </html>

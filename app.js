@@ -1218,10 +1218,10 @@
   });
 
   // Methode de secours pour les navigateurs sans presse-papier moderne.
-  function copieDeSecours() {
+  function copieDeSecours(texte) {
     try {
       var zone = document.createElement('textarea');
-      zone.value = texteOriginal;
+      zone.value = texte === undefined ? texteOriginal : texte;
       zone.setAttribute('readonly', '');
       zone.style.position = 'fixed';
       zone.style.opacity = '0';
@@ -1234,6 +1234,281 @@
       return false;
     }
   }
+
+  /* ----------------------------------------------------------- */
+  /* 7 bis. Assistant de copie                                   */
+  /*    On designe un passage par ses mots, au lieu de tirer une */
+  /*    poignee de selection pendant trente secondes.            */
+  /* ----------------------------------------------------------- */
+
+  var elCopie     = $('#copie');
+  var elChampC    = $('#copie-champ');
+  var elMessageC  = $('#copie-message');
+  var elChoix     = $('#copie-choix');
+  var elApercu    = $('#copie-apercu');
+  var elValider   = $('#copie-valider');
+
+  var assistant = { index: null, debut: null, fin: null, etape: 'debut' };
+
+  // Le texte tel qu'il est affiche : le rendu, le texte brut, ou le texte
+  // des pages d'un PDF selon la vue en cours.
+  function texteVisible() {
+    if (document.body.dataset.mode === 'source') {
+      var blocs = elSourceTexte.querySelectorAll('.bloc-brut');
+      if (blocs.length) {
+        return Array.prototype.map.call(blocs, function (b) { return b.textContent; }).join('\n');
+      }
+      return elSourceTexte.textContent;
+    }
+    var couches = elDoc.querySelectorAll('.texte-pdf');
+    if (couches.length) {
+      return Array.prototype.map.call(couches, function (c) {
+        return c.innerText || c.textContent;
+      }).join('\n\n');
+    }
+    return elDoc.innerText || elDoc.textContent;
+  }
+
+  // Version comparable du texte : sans accents, sans majuscules, espaces
+  // ramenes a un seul. On garde pour chaque caractere sa position d'origine,
+  // afin de pouvoir revenir au texte exact.
+  function normaliser(texte) {
+    var norme = '';
+    var positions = [];
+    var espace = false;
+
+    for (var i = 0; i < texte.length; i++) {
+      var c = texte.charAt(i);
+      if (/[\u0300-\u036f]/.test(c)) continue;          // accent detache
+      if (/\s/.test(c)) {
+        if (!espace && norme.length) { norme += ' '; positions.push(i); espace = true; }
+        continue;
+      }
+      espace = false;
+      var base = c.normalize ? c.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : c;
+      norme += (base.charAt(0) || c).toLowerCase();
+      positions.push(i);
+    }
+    return { texte: texte, norme: norme, positions: positions };
+  }
+
+  function trouverOccurrences(index, requete, apres) {
+    var cible = normaliser(requete).norme.trim();
+    if (!cible) return [];
+
+    var depuis = 0;
+    if (apres != null) {
+      while (depuis < index.positions.length && index.positions[depuis] < apres) depuis++;
+    }
+
+    var trouvees = [];
+    var i = index.norme.indexOf(cible, depuis);
+    while (i !== -1 && trouvees.length < 40) {
+      trouvees.push({ debut: index.positions[i], fin: index.positions[i + cible.length - 1] + 1 });
+      i = index.norme.indexOf(cible, i + 1);
+    }
+    return trouvees;
+  }
+
+  function extraitAutour(texte, debut, fin) {
+    var avant = texte.slice(Math.max(0, debut - 40), debut).replace(/\s+/g, ' ');
+    var apres = texte.slice(fin, fin + 55).replace(/\s+/g, ' ');
+    return {
+      avant: (debut > 40 ? '…' : '') + avant,
+      motif: texte.slice(debut, fin).replace(/\s+/g, ' '),
+      apres: apres + (fin + 55 < texte.length ? '…' : '')
+    };
+  }
+
+  function messageCopie(texte) {
+    elMessageC.textContent = texte || '';
+    elMessageC.hidden = !texte;
+  }
+
+  function ouvrirAssistant() {
+    var texte = texteVisible();
+    if (!texte || texte.trim().length < 2) {
+      toast('Il n\'y a pas encore de texte à copier.');
+      return;
+    }
+    assistant = { index: normaliser(texte), debut: null, fin: null, etape: 'debut' };
+    elCopie.hidden = false;
+    allerEtape('debut');
+  }
+
+  function fermerAssistant() {
+    elCopie.hidden = true;
+    elChampC.value = '';
+    messageCopie('');
+    elChoix.hidden = true;
+    elApercu.hidden = true;
+  }
+
+  function allerEtape(etape, garderMessage) {
+    assistant.etape = etape;
+    elChoix.hidden = true;
+    elChoix.innerHTML = '';
+    elApercu.hidden = true;
+    if (!garderMessage) messageCopie('');
+
+    elValider.hidden = false;
+
+    if (etape === 'debut' || etape === 'fin') {
+      var debutEtape = etape === 'debut';
+      $('#copie-etape').textContent = debutEtape ? 'Étape 1 sur 2' : 'Étape 2 sur 2';
+      $('#copie-question').textContent = debutEtape
+        ? 'Par quels mots le passage commence-t-il ?'
+        : 'Par quels mots le passage se termine-t-il ?';
+      elChampC.placeholder = debutEtape ? 'Les premiers mots du passage'
+                                        : 'Les derniers mots du passage';
+      elChampC.value = '';
+      elChampC.hidden = false;
+      $('#copie-question').hidden = false;
+      elValider.textContent = 'Continuer';
+      elChampC.focus();
+    } else if (etape === 'choix') {
+      elChampC.hidden = true;
+      elValider.hidden = true;        // c'est la liste qui fait avancer
+      elChoix.hidden = false;
+    } else if (etape === 'apercu') {
+      elChampC.hidden = true;
+      $('#copie-question').hidden = true;
+      $('#copie-etape').textContent = 'Passage repéré';
+      elValider.textContent = 'Copier';
+      elApercu.hidden = false;
+    }
+  }
+
+  // Plusieurs endroits possibles : on montre le texte autour de chacun pour
+  // que l'utilisateur designe le bon.
+  function proposerChoix(occurrences, question, suite) {
+    $('#copie-etape').textContent = 'Précision';
+    $('#copie-question').textContent = question;
+    $('#copie-question').hidden = false;
+    allerEtape('choix', true);
+
+    occurrences.forEach(function (occurrence, rang) {
+      var li = document.createElement('li');
+      var bouton = document.createElement('button');
+      bouton.type = 'button';
+
+      var numero = document.createElement('span');
+      numero.className = 'rang';
+      numero.textContent = 'Occurrence ' + (rang + 1) + ' sur ' + occurrences.length + ' — ';
+      bouton.appendChild(numero);
+
+      var e = extraitAutour(assistant.index.texte, occurrence.debut, occurrence.fin);
+      bouton.appendChild(document.createTextNode(e.avant));
+      var marque = document.createElement('mark');
+      marque.textContent = e.motif;
+      bouton.appendChild(marque);
+      bouton.appendChild(document.createTextNode(e.apres));
+
+      bouton.addEventListener('click', function () { suite(occurrence); });
+      li.appendChild(bouton);
+      elChoix.appendChild(li);
+    });
+  }
+
+  function choisirDebut(occurrence) {
+    assistant.debut = occurrence;
+    allerEtape('fin');
+  }
+
+  function choisirFin(occurrence) {
+    assistant.fin = occurrence;
+    montrerApercu();
+  }
+
+  function montrerApercu() {
+    var passage = assistant.index.texte.slice(assistant.debut.debut, assistant.fin.fin);
+    assistant.passage = passage;
+
+    var mots = passage.split(/\s+/).filter(Boolean).length;
+    elApercu.innerHTML = '';
+
+    var compte = document.createElement('p');
+    compte.className = 'compte';
+    compte.textContent = mots + (mots > 1 ? ' mots' : ' mot') + ' · '
+                       + passage.length + ' caractères';
+    elApercu.appendChild(compte);
+
+    var extrait = document.createElement('p');
+    extrait.className = 'extrait';
+    if (passage.length <= 320) {
+      extrait.textContent = passage;
+    } else {
+      extrait.appendChild(document.createTextNode(passage.slice(0, 150)));
+      var coupure = document.createElement('span');
+      coupure.className = 'coupure';
+      coupure.textContent = '\n\n […] \n\n';
+      extrait.appendChild(coupure);
+      extrait.appendChild(document.createTextNode(passage.slice(-150)));
+    }
+    elApercu.appendChild(extrait);
+
+    allerEtape('apercu');
+  }
+
+  function validerAssistant() {
+    if (assistant.etape === 'apercu') {
+      copierTexte(assistant.passage, function (ok) {
+        fermerAssistant();
+        toast(ok ? 'Passage copié : ' + assistant.passage.length + ' caractères.'
+                 : 'La copie a échoué.');
+      });
+      return;
+    }
+
+    var requete = elChampC.value.trim();
+    if (requete.length < 2) {
+      messageCopie('Écris au moins deux caractères.');
+      return;
+    }
+
+    var debutEtape = assistant.etape === 'debut';
+    var apres = debutEtape ? null : assistant.debut.fin;
+    var occurrences = trouverOccurrences(assistant.index, requete, apres);
+
+    if (!occurrences.length) {
+      messageCopie(debutEtape
+        ? 'Ces mots ne se trouvent pas dans le document. Vérifie l\'orthographe — les accents et les majuscules, eux, n\'ont pas d\'importance.'
+        : 'Ces mots ne se trouvent pas après le début choisi.');
+      return;
+    }
+
+    if (occurrences.length === 1) {
+      if (debutEtape) choisirDebut(occurrences[0]);
+      else choisirFin(occurrences[0]);
+      return;
+    }
+
+    proposerChoix(occurrences,
+      debutEtape
+        ? 'Ces mots apparaissent ' + occurrences.length + ' fois. Où commence le passage ?'
+        : 'Ces mots apparaissent ' + occurrences.length + ' fois après le début. Où se termine le passage ?',
+      debutEtape ? choisirDebut : choisirFin);
+  }
+
+  // Copie avec repli sur l'ancienne methode si le presse-papier moderne
+  // n'est pas disponible.
+  function copierTexte(texte, fini) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texte).then(function () { fini(true); },
+                                                function () { fini(copieDeSecours(texte)); });
+    } else {
+      fini(copieDeSecours(texte));
+    }
+  }
+
+  $('#btn-copier-passage').addEventListener('click', ouvrirAssistant);
+  $('#copie-annuler').addEventListener('click', fermerAssistant);
+  $('#copie-fond').addEventListener('click', fermerAssistant);
+  elValider.addEventListener('click', validerAssistant);
+  elChampC.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); validerAssistant(); }
+    else if (e.key === 'Escape') fermerAssistant();
+  });
 
   /* ----------------------------------------------------------- */
   /* 8. Recherche                                                */
@@ -1458,10 +1733,35 @@
     document.documentElement.setAttribute('data-theme', theme);
     ecrire(STORE.theme, theme);
   }
+  function majEtiquetteTheme() {
+    var etiquette = $('#etiquette-theme');
+    if (etiquette) etiquette.textContent = NOMS[theme];
+  }
+
   appliquerTheme();
+  majEtiquetteTheme();
+
+  var elPanneau = $('#panneau-plus');
+  function fermerPanneau() {
+    elPanneau.hidden = true;
+    $('#btn-plus').setAttribute('aria-expanded', 'false');
+  }
+  $('#btn-plus').addEventListener('click', function (e) {
+    e.stopPropagation();
+    elPanneau.hidden = !elPanneau.hidden;
+    $('#btn-plus').setAttribute('aria-expanded', elPanneau.hidden ? 'false' : 'true');
+  });
+  document.addEventListener('click', function (e) {
+    if (!elPanneau.hidden && !elPanneau.contains(e.target)) fermerPanneau();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !elPanneau.hidden) fermerPanneau();
+  });
+
   $('#btn-theme').addEventListener('click', function () {
     theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
     appliquerTheme();
+    majEtiquetteTheme();
     toast(NOMS[theme]);
   });
 
