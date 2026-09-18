@@ -26,14 +26,116 @@
       detail: 'Fichiers .md et .markdown',
       bouton: 'Ouvrir un fichier .md',
       accept: '.md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain',
-      // transforme le texte du fichier en HTML affichable
+      extensions: /\.(md|markdown|mdown|mkd|txt)$/i,
+      // du Markdown vers l'affichage mis en forme
       rendu: function (texte) {
         return DOMPurify.sanitize(marked.parse(texte), { USE_PROFILES: { html: true } });
+      },
+      // ce que montre la vue "texte d'origine" : le fichier, inchange
+      source: function (texte) {
+        return { texte: texte, mention: "Texte d'origine, non transformé" };
+      }
+    },
+
+    html: {
+      nom: 'HTML',
+      pastille: 'HTML',
+      detail: 'Pages .html — reconverties en Markdown',
+      bouton: 'Ouvrir un fichier .html',
+      accept: '.html,.htm,text/html',
+      extensions: /\.(html?|xhtml)$/i,
+      collage: true,                       // ce format accepte aussi du texte colle
+      rendu: function (texte) {
+        return nettoyerHtml(texte);
+      },
+      // ici la vue "texte d'origine" fait le chemin inverse : elle
+      // reconstruit le Markdown a partir de la mise en forme
+      source: function (texte) {
+        return { texte: htmlVersMarkdown(texte), mention: 'Reconverti en Markdown' };
       }
     }
   };
 
-  var ORDRE = ['markdown'];        // ordre d'affichage dans le menu
+  function nettoyerHtml(texte) {
+    return DOMPurify.sanitize(texte, {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ['style', 'link', 'meta', 'title', 'head', 'form', 'input', 'button']
+    });
+  }
+
+  // Convertisseur HTML -> Markdown, construit une seule fois.
+  var convertisseur = null;
+  function outilMarkdown() {
+    if (convertisseur) return convertisseur;
+
+    convertisseur = new TurndownService({
+      headingStyle: 'atx',            // # Titre  plutot que les soulignements
+      hr: '---',
+      bulletListMarker: '-',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+      strongDelimiter: '**',
+      linkStyle: 'inlined'
+    });
+
+    // Puces : un seul espace apres le tiret, au lieu de trois.
+    convertisseur.addRule('puces', {
+      filter: 'li',
+      replacement: function (contenu, noeud, options) {
+        contenu = contenu.replace(/^\n+/, '').replace(/\n+$/, '\n').replace(/\n/gm, '\n  ');
+        var prefixe = options.bulletListMarker + ' ';
+        var parent = noeud.parentNode;
+        if (parent.nodeName === 'OL') {
+          var depart = parent.getAttribute('start');
+          var rang = Array.prototype.indexOf.call(parent.children, noeud);
+          prefixe = (depart ? Number(depart) + rang : rang + 1) + '. ';
+        }
+        return prefixe + contenu + (noeud.nextSibling && !/\n$/.test(contenu) ? '\n' : '');
+      }
+    });
+
+    // Tableaux : Turndown les aplatit ; on reconstruit la syntaxe Markdown.
+    convertisseur.addRule('tableaux', {
+      filter: 'table',
+      replacement: function (contenu, table) {
+        var lignes = Array.prototype.slice.call(table.rows);
+        if (!lignes.length) return '';
+
+        var cellule = function (td) {
+          var m = convertisseur.turndown(td.innerHTML || '');
+          return m.replace(/\n+/g, ' ').replace(/\|/g, '\\|').trim();
+        };
+        var enLigne = function (cells) { return '| ' + cells.join(' | ') + ' |'; };
+
+        var entete = Array.prototype.slice.call(lignes[0].cells).map(cellule);
+        var sortie = [enLigne(entete), enLigne(entete.map(function () { return '---'; }))];
+        lignes.slice(1).forEach(function (ligne) {
+          sortie.push(enLigne(Array.prototype.slice.call(ligne.cells).map(cellule)));
+        });
+        return '\n\n' + sortie.join('\n') + '\n\n';
+      }
+    });
+
+    return convertisseur;
+  }
+
+  function htmlVersMarkdown(texte) {
+    try {
+      return outilMarkdown().turndown(nettoyerHtml(texte)).replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    } catch (e) {
+      return texte;      // en cas de pepin, mieux vaut rendre le texte tel quel
+    }
+  }
+
+  // Quel format pour ce nom de fichier ? (null si on ne sait pas)
+  function formatPourFichier(nom) {
+    for (var i = 0; i < ORDRE.length; i++) {
+      if (FORMATS[ORDRE[i]].extensions.test(nom || '')) return ORDRE[i];
+    }
+    return null;
+  }
+
+  var ORDRE = ['markdown', 'html'];   // ordre d'affichage dans le menu
   var formatActif = 'markdown';
   var termeAccueil = '';           // filtre en cours sur la liste des fichiers
 
@@ -253,6 +355,8 @@
     $('#format-detail').textContent = format.detail;
     $('#btn-open-big').textContent = format.bouton;
     elInput.setAttribute('accept', format.accept);
+    $('#btn-coller').hidden = !format.collage;
+    $('#collage').hidden = true;
     majAccueil();
   }
 
@@ -362,9 +466,10 @@
   var elToTop    = $('#to-top');
 
   function afficher(texte, nomFichier, format, terme) {
+    var reglages = FORMATS[format || formatActif];
     var html;
     try {
-      html = FORMATS[format || formatActif].rendu(texte);
+      html = reglages.rendu(texte);
     } catch (e) {
       toast("Ce fichier n'a pas pu être affiché.");
       return;
@@ -385,9 +490,12 @@
       wrap.appendChild(table);
     });
 
-    // La vue "texte d'origine" recoit le fichier tel quel, sans transformation.
-    texteOriginal = texte;
-    elSourceTexte.textContent = texte;
+    // La seconde vue : le fichier tel quel pour le Markdown, le Markdown
+    // reconstruit pour le HTML.
+    var brut = reglages.source(texte);
+    texteOriginal = brut.texte;
+    elSourceTexte.textContent = brut.texte;
+    $('.source-mention').textContent = brut.mention;
 
     // On garde le HTML propre : la recherche le reconstruit a chaque frappe.
     htmlRendu = elDoc.innerHTML;
@@ -409,7 +517,8 @@
   function ouvrirFichier(file) {
     if (!file) return;
     var nom = file.name || 'Document';
-    var format = formatActif;
+    var format = formatPourFichier(nom) || formatActif;
+    if (format !== formatActif) choisirFormat(format);   // on suit le fichier
     var lecture = file.text
       ? file.text()
       : new Promise(function (resolve, reject) {      // secours navigateurs anciens
@@ -434,6 +543,50 @@
     ouvrirFichier(elInput.files && elInput.files[0]);
     elInput.value = '';        // permet de rouvrir deux fois le meme fichier
   });
+
+  /* ----------------------------------------------------------- */
+  /* 6 bis. Coller du texte deja mis en forme                    */
+  /* ----------------------------------------------------------- */
+
+  var elCollage = $('#collage');
+  var elZone    = $('#collage-zone');
+
+  $('#btn-coller').addEventListener('click', function () {
+    elCollage.hidden = !elCollage.hidden;
+    if (!elCollage.hidden) {
+      elZone.textContent = '';
+      elZone.focus();
+    }
+  });
+
+  elZone.addEventListener('paste', function (e) {
+    var presse = e.clipboardData;
+    if (!presse) return;
+
+    var html = presse.getData('text/html');
+    var brut = presse.getData('text/plain');
+    e.preventDefault();
+
+    if (html) {
+      // du texte mis en forme : on le reconvertit en Markdown
+      ouvrirContenu('Texte collé', html, 'html');
+    } else if (brut && brut.trim()) {
+      // du texte simple : rien a detransformer, on le lit tel quel
+      ouvrirContenu('Texte collé', brut, 'markdown');
+    } else {
+      toast('Le presse-papier est vide.');
+      return;
+    }
+    elZone.textContent = '';
+    elCollage.hidden = true;
+  });
+
+  // Ouvre un contenu qui ne vient pas d'un fichier (collage, partage...).
+  function ouvrirContenu(nom, texte, format) {
+    if (format !== formatActif) choisirFormat(format);
+    ajouterRecent(nom, texte, format);
+    afficher(texte, nom, format);
+  }
 
   /* ----------------------------------------------------------- */
   /* 7. Mise en forme ou texte d'origine                         */
@@ -463,7 +616,9 @@
   $('#btn-mode').addEventListener('click', function () {
     mode = mode === 'rendu' ? 'source' : 'rendu';
     appliquerMode();
-    toast(mode === 'source' ? "Texte d'origine, non transformé" : 'Texte mis en forme');
+    // le message reprend la mention du format : "texte d'origine" pour du
+    // Markdown, "reconverti en Markdown" pour du HTML
+    toast(mode === 'source' ? $('.source-mention').textContent : 'Texte mis en forme');
     if (!elRecherche.hidden) lancerRecherche();   // on resurligne dans la vue affichee
     window.scrollTo(0, 0);
     majProgression();
@@ -746,8 +901,10 @@
         if (!reponse) return false;
         return reponse.json().then(function (donnees) {
           cache.delete(cle);
-          ajouterRecent(donnees.nom, donnees.texte, 'markdown');
-          afficher(donnees.texte, donnees.nom, 'markdown');
+          var format = formatPourFichier(donnees.nom) || 'markdown';
+          if (format !== formatActif) choisirFormat(format);
+          ajouterRecent(donnees.nom, donnees.texte, format);
+          afficher(donnees.texte, donnees.nom, format);
           return true;
         });
       });

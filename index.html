@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=8">
+<link rel="stylesheet" href="./style.css?v=9">
 </head>
 <body data-vue="accueil">
 
@@ -89,6 +89,17 @@
 
     <button id="btn-open-big" class="primary-btn">Ouvrir un fichier</button>
 
+    <button id="btn-coller" class="secondaire" type="button" hidden>Coller du texte mis en forme</button>
+
+    <div id="collage" class="collage" hidden>
+      <div id="collage-zone" class="collage-zone" contenteditable="true" role="textbox"
+           aria-label="Zone de collage" data-vide="Colle ton texte ici"></div>
+      <p class="collage-aide">
+        Appuie longuement dans le cadre, puis choisis <strong>Coller</strong>.
+        Le texte mis en forme sera reconverti en Markdown.
+      </p>
+    </div>
+
     <h3 class="section-titre">Fichiers récents</h3>
     <ul id="recents" class="recents"></ul>
     <p id="recherche-vide" class="vide" hidden>
@@ -126,6 +137,7 @@
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
-<script src="./app.js?v=7"></script>
+<script src="./vendor/turndown.umd.js"></script>
+<script src="./app.js?v=8"></script>
 </body>
 </html>

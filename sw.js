@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v9';
+var VERSION = 'v10';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 
@@ -17,6 +17,7 @@ var FICHIERS = [
   './manifest.webmanifest',
   './vendor/marked.umd.js',
   './vendor/purify.min.js',
+  './vendor/turndown.umd.js',
   './icons/logo.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',

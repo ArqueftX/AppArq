@@ -55,6 +55,22 @@ dans l'application. La croix à droite retire une ligne de la liste.
 La recherche ne tient pas compte des majuscules, mais elle est sensible aux
 accents : « reunion » ne trouvera pas « réunion ».
 
+**Deux formats sont reconnus**, listés dans le menu latéral :
+
+- **Markdown** (`.md`, `.markdown`, `.txt`) — affiché mis en forme ;
+- **HTML** (`.html`, `.htm`) — affiché mis en forme lui aussi, mais le bouton
+  `< >` le **reconvertit en Markdown**. C'est le chemin inverse : un texte déjà
+  mis en forme redevient du Markdown, avec ses `#`, ses `*`, ses listes et ses
+  tableaux. « Copier tout » copie alors ce Markdown reconstruit.
+
+Le format est deviné d'après l'extension du fichier : ouvrir un `.html` depuis
+la page Markdown bascule tout seul sur le bon format.
+
+**Coller du texte mis en forme** : sur la page HTML, le bouton *Coller du texte
+mis en forme* ouvre un cadre. Colle dedans du texte copié depuis une page web ou
+un traitement de texte : sa mise en forme est reconvertie en Markdown. Si tu
+colles du texte simple, il est lu tel quel, sans conversion.
+
 **Mise en forme ou texte d'origine** (bouton `< >` pendant la lecture) : par
 défaut l'application *interprète* le Markdown — les `*` deviennent de l'italique
 ou du gras, les `#` deviennent des titres, et ces marqueurs disparaissent de
@@ -112,12 +128,14 @@ Markdown standard (GitHub Flavored Markdown).
 | `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
 | `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
 | `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
-| `vendor/` | Deux bibliothèques externes, copiées ici pour marcher hors connexion |
+| `vendor/` | Trois bibliothèques externes, copiées ici pour marcher hors connexion |
 
 **Les bibliothèques utilisées :**
-[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML, et
-[DOMPurify](https://github.com/cure53/DOMPurify) nettoie ce HTML pour qu'un
-fichier piégé ne puisse rien exécuter. Leurs licences sont dans `vendor/`.
+[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML,
+[Turndown](https://github.com/mixmark-io/turndown) fait le chemin inverse
+(HTML vers Markdown), et [DOMPurify](https://github.com/cure53/DOMPurify)
+nettoie le HTML pour qu'un fichier piégé ne puisse rien exécuter. Leurs licences
+sont dans `vendor/`.
 
 ---
 
@@ -140,20 +158,21 @@ Quelques exemples faciles pour commencer :
 - **Changer la taille de texte par défaut** : dans `app.js`, le `|| 17` de la ligne
   `var taille = parseInt(...) || 17;`.
 - **Ajouter un format de fichier** : tout est prévu pour. En haut de `app.js`, la
-  liste `FORMATS` décrit chaque format (son nom, sa pastille, les extensions
-  acceptées et la fonction qui transforme le fichier en HTML). Ajoute une entrée,
-  ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil et
-  l'historique s'adaptent tout seuls.
+  liste `FORMATS` décrit chaque format : son nom, sa pastille, les extensions
+  acceptées, la fonction `rendu` (fichier → affichage mis en forme) et la
+  fonction `source` (ce que montre le bouton `< >`, avec sa mention). Ajoute une
+  entrée, ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil,
+  l'historique et la détection par extension s'adaptent tout seuls.
 
 > ⚠️ **Après chaque modification de `style.css` ou `app.js`**, change le numéro
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=8` → `style.css?v=9` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v9';` → `'v10'`.
+> 1. dans `index.html` : `style.css?v=9` → `style.css?v=10` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v10';` → `'v11'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=9` est une adresse qu'il n'a jamais vue.
+> `style.css?v=10` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

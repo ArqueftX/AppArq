@@ -333,6 +333,48 @@ main {
 }
 .primary-btn:active { transform: scale(.99); }
 
+.secondaire {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.secondaire:active { transform: scale(.99); }
+.secondaire[hidden] { display: none; }
+
+.collage { margin-top: 12px; }
+.collage[hidden] { display: none; }
+
+.collage-zone {
+  -webkit-user-select: text;
+  user-select: text;
+  min-height: 108px;
+  padding: 13px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 15px;
+  overflow-wrap: break-word;
+}
+.collage-zone:empty::before {
+  content: attr(data-vide);
+  color: var(--muted);
+}
+.collage-zone:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.collage-aide {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .section-titre {
   margin: 28px 0 8px;
   font-size: 12.5px;
