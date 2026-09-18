@@ -33,9 +33,42 @@ transmet **aucun fichier sur Internet** : tout est lu sur ton appareil.
 
 L'application s'ouvre sur sa **page d'accueil**, organisée par format de fichier.
 
-**Le menu latéral** (bouton ☰ en haut à gauche) liste les formats reconnus. Pour
-l'instant il n'y en a qu'un, Markdown, avec le nombre de fichiers récents. Sur
-un écran large (tablette, ordinateur) ce menu reste affiché en permanence.
+**Le menu latéral** (bouton ☰ en haut à gauche) liste les formats reconnus, avec
+le nombre de fichiers récents de chacun. Sur un écran large (tablette,
+ordinateur) ce menu reste affiché en permanence.
+
+**Trois formats sont reconnus.** Chacun a sa page, et chacun propose une version
+propre et une version brute :
+
+| Format | Version propre | Version brute |
+| --- | --- | --- |
+| **Markdown** (`.md`, `.txt`) | Le texte mis en forme | Le fichier lui-même, inchangé |
+| **EPUB** (`.epub`) | Les chapitres du livre, mis en forme | Du Markdown reconstruit par l'application |
+| **PDF** (`.pdf`) | Les vraies pages du document | Du Markdown reconstruit par l'application |
+
+Pour le **PDF**, la version propre affiche le document **tel qu'il est**, page
+par page : mise en page, colonnes, tableaux, polices — tout est fidèle, puisque
+rien n'est deviné. Une couche de texte invisible est posée sur chaque page, donc
+la sélection, le copier-coller et la recherche fonctionnent quand même. Le
+fichier est gardé dans l'application (jusqu'à 60 Mo) pour être rouvert plus
+tard, même sans connexion. Un PDF **scanné** s'affiche donc parfaitement.
+
+La version brute d'un PDF, elle, est une **reconstitution** : un PDF ne contient
+ni paragraphes ni titres, seulement des morceaux de texte posés à des
+coordonnées. L'application les regroupe en lignes, devine les titres d'après la
+taille des caractères, recoud les mots coupés en fin de ligne, reconnaît les
+listes, lit les deux colonnes dans le bon ordre au lieu de les entrelacer, et
+écarte les en-têtes et numéros de page répétés. C'est perfectible par nature —
+mais ce n'est plus la seule façon de lire le document. Sur un PDF scanné, elle
+indique simplement qu'il n'y a pas de texte à extraire.
+
+Pour l'**EPUB**, un livre numérique est une archive : l'application en extrait
+les chapitres dans l'ordre. Les images des livres et des PDF ne sont pas
+reprises dans les versions brutes, seulement le texte.
+
+Le format est deviné d'après l'extension du fichier : ouvrir un `.pdf` depuis la
+page Markdown bascule tout seul sur la bonne page. L'application rouvre ensuite
+sur le format que tu utilisais en dernier.
 
 **La page du format** affiche un bouton pour ouvrir un nouveau fichier, puis la
 liste des **fichiers récents** : leur nom, quand tu les as ouverts et leur taille.
@@ -57,9 +90,10 @@ accents : « reunion » ne trouvera pas « réunion ».
 
 **Deux façons de lire un document**, avec le bouton `‹ ›` de la barre du haut :
 
-- **mise en page propre** (par défaut) — l'application interprète le Markdown :
-  les `*` deviennent de l'italique ou du gras, les `#` deviennent des titres, et
-  ces marqueurs disparaissent de l'affichage ;
+- **mise en page propre** (par défaut) — pour un Markdown, l'application
+  interprète les marqueurs : les `*` deviennent de l'italique ou du gras, les
+  `#` deviennent des titres, et ces marqueurs disparaissent de l'affichage. Pour
+  un PDF, ce sont les vraies pages du document ;
 - **texte brut** — le fichier tel qu'il est écrit, tous les caractères
   apparents, dans une police à chasse fixe. C'est la vue à utiliser pour copier
   du texte et le recoller ailleurs sans rien perdre. Un bouton **Copier tout**
@@ -77,8 +111,8 @@ prend que le document.
 **Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour*
 d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 
-**Depuis ton gestionnaire de fichiers** : appui long sur un fichier `.md` →
-**Partager** → **AppArq**. Le document s'ouvre directement.
+**Depuis ton gestionnaire de fichiers** : appui long sur un fichier (`.md`,
+`.epub` ou `.pdf`) → **Partager** → **AppArq**. Le document s'ouvre directement.
 
 **Les autres boutons de la barre du haut :**
 
@@ -93,8 +127,9 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | 🌗 | Basculer entre thème automatique, clair et sombre |
 
 Les 15 derniers fichiers restent proposés sur l'accueil, même après avoir fermé
-l'application. Les contenus sont gardés jusqu'à environ 2 Mo au total : au-delà,
-les plus anciens sont oubliés et leur ligne indique « à rouvrir ».
+l'application. Les textes sont gardés jusqu'à environ 2 Mo au total : au-delà,
+les plus anciens sont oubliés et leur ligne indique « à rouvrir ». Les PDF, eux,
+sont conservés en entier (jusqu'à 60 Mo) dans un espace de stockage distinct.
 
 ### Ce que l'application sait afficher
 
