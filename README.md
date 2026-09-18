@@ -117,13 +117,17 @@ Markdown standard (GitHub Flavored Markdown).
 | `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
 | `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
 | `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
-| `vendor/` | Quatre bibliothèques externes, copiées ici pour marcher hors connexion |
+| `vendor/` | Cinq bibliothèques externes, copiées ici pour marcher hors connexion |
 
-**Les bibliothèques utilisées :**
+**Les bibliothèques utilisées :** (pdf.js pèse à lui seul 1,8 Mo, soit bien plus
+que tout le reste : il n'est donc téléchargé qu'à la première ouverture d'un
+PDF, puis gardé dans un cache qui survit aux mises à jour de l'application.)
+
 [marked](https://github.com/markedjs/marked) transforme le Markdown en HTML,
 [Turndown](https://github.com/mixmark-io/turndown) fait le chemin inverse pour
-les livres EPUB, [fflate](https://github.com/101arrowz/fflate) ouvre l'archive
-d'un EPUB, et [DOMPurify](https://github.com/cure53/DOMPurify) nettoie le HTML
+les EPUB et les PDF, [fflate](https://github.com/101arrowz/fflate) ouvre
+l'archive d'un EPUB, [pdf.js](https://github.com/mozilla/pdf.js) lit les PDF, et
+[DOMPurify](https://github.com/cure53/DOMPurify) nettoie le HTML
 pour qu'un fichier piégé ne puisse rien exécuter. Leurs licences sont dans
 `vendor/`.
 
@@ -168,7 +172,7 @@ Quelques exemples faciles pour commencer :
 > l'ancienne version gardée en mémoire :
 >
 > 1. dans `index.html` : `style.css?v=14` → `style.css?v=15` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v17';` → `'v18'`.
+> 2. dans `sw.js` : `var VERSION = 'v19';` → `'v20'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
 > `style.css?v=15` est une adresse qu'il n'a jamais vue.

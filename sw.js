@@ -5,9 +5,12 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v17';
+var VERSION = 'v19';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
+// Les grosses bibliotheques chargees a la demande (pdf.js) sont gardees a part :
+// elles survivent aux changements de version, pour ne pas etre retelechargees.
+var CACHE_LIBS = 'apparq-bibliotheques';
 
 var FICHIERS = [
   './',
@@ -46,7 +49,9 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (noms) {
       return Promise.all(noms.map(function (nom) {
-        if (nom !== CACHE_APP && nom !== CACHE_PARTAGE) return caches.delete(nom);
+        if (nom !== CACHE_APP && nom !== CACHE_PARTAGE && nom !== CACHE_LIBS) {
+          return caches.delete(nom);
+        }
       }));
     }).then(function () { return self.clients.claim(); })
   );
@@ -59,13 +64,13 @@ function traiterPartage(request) {
     var fichier = fichiers && fichiers.length ? fichiers[0] : null;
 
     // Un livre EPUB est une archive : on le garde tel quel, en binaire.
-    if (fichier && /\.epub$/i.test(fichier.name || '')) {
+    if (fichier && /\.(epub|pdf)$/i.test(fichier.name || '')) {
       return caches.open(CACHE_PARTAGE).then(function (cache) {
         return cache.put(new URL('__partage-livre__', self.registration.scope).href,
           new Response(fichier, {
             headers: {
-              'Content-Type': 'application/epub+zip',
-              'X-Nom': encodeURIComponent(fichier.name || 'livre.epub')
+              'Content-Type': fichier.type || 'application/octet-stream',
+              'X-Nom': encodeURIComponent(fichier.name || 'document')
             }
           }));
       });
@@ -125,7 +130,9 @@ self.addEventListener('fetch', function (event) {
       var reseau = fetch(request).then(function (reponse) {
         if (reponse && reponse.status === 200 && reponse.type === 'basic') {
           var copie = reponse.clone();
-          caches.open(CACHE_APP).then(function (cache) { cache.put(request, copie); });
+          // pdf.js et consorts vont dans le cache durable
+          var ou = url.pathname.indexOf('/vendor/') >= 0 ? CACHE_LIBS : CACHE_APP;
+          caches.open(ou).then(function (cache) { cache.put(request, copie); });
         }
         return reponse;
       }).catch(function () { return enCache; });

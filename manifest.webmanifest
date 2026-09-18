@@ -49,13 +49,15 @@
             "text/x-markdown",
             "text/plain",
             "application/epub+zip",
+            "application/pdf",
             "application/octet-stream",
             ".md",
             ".markdown",
             ".mdown",
             ".mkd",
             ".txt",
-            ".epub"
+            ".epub",
+            ".pdf"
           ]
         }
       ]
@@ -73,6 +75,9 @@
         ],
         "application/epub+zip": [
           ".epub"
+        ],
+        "application/pdf": [
+          ".pdf"
         ],
         "text/plain": [
           ".txt"

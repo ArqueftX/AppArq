@@ -54,6 +54,23 @@
       source: function (texte) {
         return { texte: htmlVersMarkdown(texte), mention: 'Texte du livre, converti en Markdown' };
       }
+    },
+
+    pdf: {
+      nom: 'PDF',
+      pastille: 'PDF',
+      detail: 'Documents .pdf — le texte, sans les images',
+      bouton: 'Ouvrir un fichier .pdf',
+      accept: '.pdf,application/pdf',
+      extensions: /\.pdf$/i,
+      binaire: true,
+      extraire: extrairePdf,
+      rendu: function (texte) {
+        return nettoyerHtml(texte);
+      },
+      source: function (texte) {
+        return { texte: htmlVersMarkdown(texte), mention: 'Texte du PDF, converti en Markdown' };
+      }
     }
   };
 
@@ -135,6 +152,177 @@
     return { texte: morceaux.join('\n<hr />\n'), nom: titre };
   }
 
+  /* ----- lecture des fichiers PDF ------------------------------------ */
+
+  // pdf.js pese 1,8 Mo : on ne le charge qu'au premier PDF ouvert, jamais
+  // au demarrage de l'application.
+  var pdfjs = null;
+  function chargerPdfjs() {
+    if (pdfjs) return Promise.resolve(pdfjs);
+    return import('./vendor/pdf.min.mjs').then(function (bibliotheque) {
+      bibliotheque.GlobalWorkerOptions.workerSrc =
+        new URL('./vendor/pdf.worker.min.mjs', location.href).href;
+      pdfjs = bibliotheque;
+      return bibliotheque;
+    });
+  }
+
+  function echapper(texte) {
+    return texte.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Recolle les lignes d'un meme paragraphe, en recousant les mots coupes
+  // en fin de ligne (« justi- fication » devient « justification »).
+  function assembler(lignes) {
+    var texte = '';
+    lignes.forEach(function (ligne, i) {
+      if (i === 0) { texte = ligne; return; }
+      if (/[-\u2010\u00ad]$/.test(texte) && /^[a-zà-öø-ÿ]/.test(ligne)) {
+        texte = texte.slice(0, -1) + ligne;
+      } else {
+        texte += ' ' + ligne;
+      }
+    });
+    return texte;
+  }
+
+  // Un PDF ne connait que des morceaux de texte poses a des coordonnees :
+  // aucune notion de paragraphe ni de titre. On les reconstitue a partir des
+  // positions et des tailles de caracteres.
+  function pageEnHtml(contenu) {
+    var lignes = [];
+
+    contenu.items.forEach(function (item) {
+      if (!item.str || !item.str.trim()) return;
+      var y = item.transform[5];
+      var taille = Math.abs(item.transform[3]) || item.height || 12;
+
+      // on rattache le morceau a une ligne existante de meme hauteur
+      var ligne = null;
+      for (var i = lignes.length - 1; i >= 0 && i >= lignes.length - 3; i--) {
+        if (Math.abs(lignes[i].y - y) <= Math.max(2, taille * 0.4)) { ligne = lignes[i]; break; }
+      }
+      if (!ligne) {
+        ligne = { y: y, taille: taille, morceaux: [] };
+        lignes.push(ligne);
+      }
+      ligne.taille = Math.max(ligne.taille, taille);
+      ligne.morceaux.push({ x: item.transform[4], largeur: item.width || 0, texte: item.str });
+      ligne.gauche = Math.min(ligne.gauche === undefined ? 1e9 : ligne.gauche, item.transform[4]);
+      ligne.droite = Math.max(ligne.droite || 0, item.transform[4] + (item.width || 0));
+    });
+
+    lignes.sort(function (a, b) { return b.y - a.y; });       // de haut en bas
+
+    lignes.forEach(function (ligne) {
+      ligne.morceaux.sort(function (a, b) { return a.x - b.x; });
+      var texte = '';
+      var finPrecedente = null;
+      ligne.morceaux.forEach(function (morceau) {
+        // un ecart notable entre deux morceaux vaut une espace
+        if (finPrecedente !== null && morceau.x - finPrecedente > ligne.taille * 0.2
+            && !/\s$/.test(texte) && !/^\s/.test(morceau.texte)) texte += ' ';
+        texte += morceau.texte;
+        finPrecedente = morceau.x + morceau.largeur;
+      });
+      ligne.texte = texte.replace(/\s+/g, ' ').trim();
+    });
+
+    lignes = lignes.filter(function (l) { return l.texte; });
+    if (!lignes.length) return '';
+
+    // taille de caractere la plus courante : c'est celle du corps de texte
+    var tailles = lignes.map(function (l) { return l.taille; }).sort(function (a, b) { return a - b; });
+    var corps = tailles[Math.floor(tailles.length / 2)] || 12;
+
+    // Marge droite de la page, et texte justifie ou non : dans un texte
+    // justifie, une ligne qui s'arrete avant la marge termine forcement son
+    // paragraphe. Dans un texte en drapeau, toutes les lignes s'arretent avant
+    // la marge : le signal ne vaut rien et on ne s'en sert pas.
+    var margeDroite = lignes.reduce(function (m, l) { return Math.max(m, l.droite || 0); }, 0);
+    var pleines = lignes.filter(function (l) { return l.droite >= margeDroite * 0.95; }).length;
+    var justifie = lignes.length > 4 && pleines / lignes.length > 0.55;
+
+    // regroupement en blocs : un saut vertical, un changement de taille ou une
+    // ligne courte marquent un nouveau paragraphe
+    var blocs = [];
+    var courant = null;
+    lignes.forEach(function (ligne, i) {
+      var niveau = ligne.taille > corps * 1.45 ? 1 : (ligne.taille > corps * 1.15 ? 2 : 0);
+      var precedente = i > 0 ? lignes[i - 1] : null;
+      var ecart = precedente ? precedente.y - ligne.y : 0;
+      var ligneCourte = justifie && precedente && precedente.droite < margeDroite * 0.88;
+
+      if (!courant || niveau !== courant.niveau || ecart > ligne.taille * 1.9 || ligneCourte) {
+        courant = { niveau: niveau, lignes: [], gauche: ligne.gauche };
+        blocs.push(courant);
+      }
+      courant.lignes.push(ligne.texte);
+    });
+
+    var puce = /^[•·●○▪◦‣]\s*|^[*\-–—]\s+/;
+
+    return blocs.map(function (bloc) {
+      if (bloc.niveau === 1) return '<h1>' + echapper(assembler(bloc.lignes)) + '</h1>';
+      if (bloc.niveau === 2) return '<h2>' + echapper(assembler(bloc.lignes)) + '</h2>';
+
+      // liste a puces : chaque puce ouvre un element, les lignes suivantes
+      // prolongent le precedent
+      if (bloc.lignes.some(function (l) { return puce.test(l); })) {
+        var elements = [];
+        bloc.lignes.forEach(function (ligne) {
+          if (puce.test(ligne)) elements.push([ligne.replace(puce, '')]);
+          else if (elements.length) elements[elements.length - 1].push(ligne);
+          else elements.push([ligne]);
+        });
+        return '<ul>' + elements.map(function (e) {
+          return '<li>' + echapper(assembler(e)) + '</li>';
+        }).join('') + '</ul>';
+      }
+
+      return '<p>' + echapper(assembler(bloc.lignes)) + '</p>';
+    }).join('\n');
+  }
+
+  function extrairePdf(donnees, avancement) {
+    return chargerPdfjs().then(function (bibliotheque) {
+      return bibliotheque.getDocument({ data: new Uint8Array(donnees) }).promise;
+    }).then(function (document_) {
+      var pages = [];
+      var suite = Promise.resolve();
+
+      for (var n = 1; n <= document_.numPages; n++) {
+        (function (numero) {
+          suite = suite.then(function () {
+            if (avancement) avancement(numero, document_.numPages);
+            return document_.getPage(numero)
+              .then(function (page) { return page.getTextContent(); })
+              .then(function (contenu) { pages[numero - 1] = pageEnHtml(contenu); });
+          });
+        })(n);
+      }
+
+      return suite.then(function () {
+        return document_.getMetadata().catch(function () { return { info: {} }; });
+      }).then(function (donneesDoc) {
+        var html = pages.filter(Boolean).join('\n<hr />\n');
+        // un PDF scanne ne contient que des images : rien a extraire
+        if (html.replace(/<[^>]*>/g, '').trim().length < document_.numPages * 8) {
+          throw new Error('pdf sans texte');
+        }
+        var titre = donneesDoc && donneesDoc.info && donneesDoc.info.Title
+          ? String(donneesDoc.info.Title).trim() : '';
+        // beaucoup de PDF portent un titre technique herite de l'outil qui les
+        // a produits : mieux vaut alors le nom du fichier
+        if (titre.length < 2 || /^(about:|untitled|sans titre|document\d*$|microsoft word|\w+\.(docx?|pdf|odt)$)/i.test(titre)
+            || titre.indexOf('://') >= 0) {
+          titre = '';
+        }
+        return { texte: html, nom: titre || null };
+      });
+    });
+  }
+
   /* ----- conversion HTML -> Markdown (pour la version brute) --------- */
 
   var convertisseur = null;
@@ -202,7 +390,7 @@
     return null;
   }
 
-  var ORDRE = ['markdown', 'epub'];   // ordre d'affichage dans le menu
+  var ORDRE = ['markdown', 'epub', 'pdf'];   // ordre d'affichage dans le menu
   var formatActif = 'markdown';
   var termeAccueil = '';           // filtre en cours sur la liste des fichiers
 
@@ -648,17 +836,24 @@
           }));
 
     lecture.then(function (contenu) {
-      var texte = contenu;
-      if (reglages.binaire) {
-        var extrait = reglages.extraire(contenu);   // peut lever une erreur
-        texte = extrait.texte;
-        if (extrait.nom) nom = extrait.nom;
+      if (!reglages.binaire) return { texte: contenu };
+      // l'extraction peut etre longue (un PDF de 300 pages) : on tient au courant
+      toast('Lecture de « ' + nom +' »…');
+      return reglages.extraire(contenu, function (page, total) {
+        if (total > 4 && page % 5 === 1) toast('Lecture… page ' + page + ' sur ' + total);
+      });
+    }).then(function (extrait) {
+      if (extrait.nom) nom = extrait.nom;
+      ajouterRecent(nom, extrait.texte, format);
+      afficher(extrait.texte, nom, format);
+      if (elToast && !elToast.hidden && /Lecture/.test(elToast.textContent)) elToast.hidden = true;
+    }).catch(function (e) {
+      if (e && /sans texte/.test(e.message || '')) {
+        toast('Ce PDF ne contient pas de texte : il a sans doute été scanné.');
+      } else {
+        toast(reglages.binaire ? "Ce fichier n'a pas pu être ouvert."
+                               : 'Impossible de lire ce fichier.');
       }
-      ajouterRecent(nom, texte, format);
-      afficher(texte, nom, format);
-    }).catch(function () {
-      toast(reglages.binaire ? "Ce livre n'a pas pu être ouvert."
-                             : 'Impossible de lire ce fichier.');
     });
   }
 
@@ -1008,15 +1203,17 @@
       // un livre partage arrive en binaire
       return cache.match(cleLivre).then(function (livre) {
         if (livre) {
-          var nom = decodeURIComponent(livre.headers.get('X-Nom') || 'livre.epub');
+          var nom = decodeURIComponent(livre.headers.get('X-Nom') || 'document');
           return livre.arrayBuffer().then(function (donnees) {
             cache.delete(cleLivre);
-            var extrait = FORMATS.epub.extraire(donnees);
-            var titre = extrait.nom || nom;
-            if (formatActif !== 'epub') choisirFormat('epub');
-            ajouterRecent(titre, extrait.texte, 'epub');
-            afficher(extrait.texte, titre, 'epub');
-            return true;
+            var format = formatPourFichier(nom) || 'epub';
+            return Promise.resolve(FORMATS[format].extraire(donnees)).then(function (extrait) {
+              var titre = extrait.nom || nom;
+              if (formatActif !== format) choisirFormat(format);
+              ajouterRecent(titre, extrait.texte, format);
+              afficher(extrait.texte, titre, format);
+              return true;
+            });
           });
         }
 
