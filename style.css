@@ -461,6 +461,10 @@ main {
 }
 .petit-btn:active { transform: scale(.97); }
 
+/* Chaque bloc porte lui-meme la conservation des espaces : le texte brut est
+   decoupe en petits blocs pour que la selection demarre sans delai. */
+.bloc-brut { white-space: pre-wrap; }
+
 #source-texte {
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

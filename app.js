@@ -375,6 +375,42 @@
   var elProgress = $('#progress');
   var elToTop    = $('#to-top');
 
+  // Le texte brut est decoupe en petits blocs. Un seul bloc geant obligeait le
+  // navigateur a parcourir tout le document a chaque appui long : la selection
+  // mettait un temps fou a demarrer sur telephone (18 ms contre 3 ms en mise en
+  // page, sur un fichier de 172 Ko).
+  var LIGNES_PAR_BLOC = 20;
+
+  function remplirTexteBrut(texte) {
+    var lignes = texte.split('\n');
+    var fragment = document.createDocumentFragment();
+    var i = 0;
+
+    while (i < lignes.length) {
+      var fin = Math.min(lignes.length, i + LIGNES_PAR_BLOC);
+
+      // Un bloc ne doit jamais finir par une ligne vide : a la copie, le
+      // navigateur fusionnerait ce retour a la ligne avec la separation de
+      // blocs, et le texte copie perdrait des lignes.
+      while (fin > i + 1 && lignes[fin - 1] === '') fin--;
+
+      // Cas limite : un bloc entierement vide. On avance jusqu'a une ligne pleine.
+      if (fin === i + 1 && lignes[i] === '') {
+        while (fin < lignes.length && lignes[fin] === '') fin++;
+        if (fin < lignes.length) fin++;
+      }
+
+      var bloc = document.createElement('div');
+      bloc.className = 'bloc-brut';
+      bloc.textContent = lignes.slice(i, fin).join('\n');
+      fragment.appendChild(bloc);
+      i = fin;
+    }
+
+    elSourceTexte.textContent = '';
+    elSourceTexte.appendChild(fragment);
+  }
+
   function afficher(texte, nomFichier, format, terme) {
     var reglages = FORMATS[format || formatActif];
     var html;
@@ -404,7 +440,7 @@
     // reconstruit pour le HTML.
     var brut = reglages.source(texte);
     texteOriginal = brut.texte;
-    elSourceTexte.textContent = brut.texte;
+    remplirTexteBrut(brut.texte);
     $('.source-mention').textContent = brut.mention;
 
     // On garde le HTML propre : la recherche le reconstruit a chaque frappe.
