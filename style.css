@@ -70,19 +70,22 @@ body {
 }
 
 /* ----- barre du haut ----- */
-.appbar {
+.haut {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.appbar {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: max(6px, env(safe-area-inset-top)) 10px 6px;
   padding-left: max(10px, env(safe-area-inset-left));
   padding-right: max(10px, env(safe-area-inset-right));
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
 }
 
 .brand {
@@ -117,7 +120,79 @@ body[data-vue="accueil"] #doc,
 body[data-vue="doc"] #accueil { display: none; }
 body[data-vue="accueil"] #btn-home,
 body[data-vue="accueil"] .reglage-texte,
-body[data-vue="doc"] #btn-menu { display: none; }
+body[data-vue="doc"] #btn-menu,
+body[data-vue="doc"] #btn-open { display: none; }
+body[data-vue="accueil"] .recherche-nav,
+body[data-vue="accueil"] #recherche-compteur { display: none; }
+
+/* ----- barre de recherche ----- */
+.recherche {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 8px;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right));
+}
+.recherche[hidden] { display: none; }
+
+.recherche-loupe { flex: none; width: 19px; height: 19px; fill: var(--muted); }
+
+#recherche-champ {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  -webkit-appearance: none;
+}
+#recherche-champ:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+#recherche-champ::-webkit-search-cancel-button { display: none; }
+
+.recherche-compteur {
+  flex: none;
+  min-width: 4.4em;
+  text-align: right;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.recherche .icon-btn { width: 34px; height: 34px; }
+.recherche .icon-btn svg { width: 19px; height: 19px; }
+
+/* resultats dans le document */
+mark.surlignage {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+mark.surlignage.actif {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* extrait du fichier, dans la liste des fichiers recents */
+.recent-extrait {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-extrait mark {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--text);
+  border-radius: 3px;
+}
 
 /* ----- menu lateral ----- */
 .voile {

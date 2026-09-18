@@ -42,6 +42,19 @@ liste des **fichiers récents** : leur nom, quand tu les as ouverts et leur tail
 Un appui rouvre le fichier — même hors connexion, puisque son contenu est gardé
 dans l'application. La croix à droite retire une ligne de la liste.
 
+**La recherche** (bouton 🔍) fait deux choses selon l'écran où tu te trouves :
+
+- **sur l'accueil**, elle filtre tes fichiers récents — par nom *et* par contenu.
+  Chaque résultat affiche l'extrait où le mot apparaît. Appuyer dessus ouvre le
+  fichier et la recherche se poursuit dedans, positionnée sur le mot.
+- **dans un document**, elle surligne toutes les occurrences, affiche un compteur
+  (« 3 / 12 ») et deux flèches pour passer d'une occurrence à l'autre. Le
+  résultat courant est en violet plein. La touche Entrée passe au suivant,
+  Maj+Entrée au précédent, Échap ferme. Sur ordinateur, Ctrl+F l'ouvre aussi.
+
+La recherche ne tient pas compte des majuscules, mais elle est sensible aux
+accents : « reunion » ne trouvera pas « réunion ».
+
 **Revenir à l'accueil** : la flèche ← en haut à gauche, ou le bouton *Retour*
 d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 
@@ -54,7 +67,8 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | --- | --- |
 | ☰ | Ouvrir le menu des formats (sur l'accueil) |
 | ← | Revenir à la page d'accueil (pendant la lecture) |
-| 📁 | Ouvrir un autre fichier |
+| 🔍 | Rechercher : dans les fichiers sur l'accueil, dans le texte pendant la lecture |
+| 📁 | Ouvrir un fichier (sur l'accueil) |
 | A− / A+ | Réduire ou agrandir le texte (mémorisé) |
 | 🌗 | Basculer entre thème automatique, clair et sombre |
 
@@ -120,11 +134,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=5` → `style.css?v=6` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v6';` → `'v7'`.
+> 1. dans `index.html` : `style.css?v=6` → `style.css?v=7` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v7';` → `'v8'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=6` est une adresse qu'il n'a jamais vue.
+> `style.css?v=7` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 
@@ -141,6 +155,6 @@ puis ouvre `http://localhost:8000` dans un navigateur.
 ## 5. Idées pour la suite
 
 - Un sommaire cliquable pour les longs documents
-- Une recherche dans le document
+- Une recherche insensible aux accents
 - Un mode édition, pour écrire du Markdown et pas seulement le lire
 - Transformer la PWA en vrai fichier `.apk` (avec PWABuilder ou Capacitor)

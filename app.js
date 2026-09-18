@@ -35,6 +35,7 @@
 
   var ORDRE = ['markdown'];        // ordre d'affichage dans le menu
   var formatActif = 'markdown';
+  var termeAccueil = '';           // filtre en cours sur la liste des fichiers
 
   /* ----------------------------------------------------------- */
   /* 2. Stockage                                                 */
@@ -254,12 +255,36 @@
     majAccueil();
   }
 
+  // Extrait la ligne autour d'un resultat, pour l'afficher sous le nom.
+  function extrait(texte, position, longueur) {
+    var debut = Math.max(0, position - 34);
+    return {
+      avant: (debut > 0 ? '…' : '') + texte.slice(debut, position).replace(/\s+/g, ' '),
+      motif: texte.slice(position, position + longueur),
+      apres: texte.slice(position + longueur, position + longueur + 70).replace(/\s+/g, ' ') + '…'
+    };
+  }
+
   function majAccueil() {
     construireMenu();
 
     var fichiers = listeRecents().filter(function (f) { return f.format === formatActif; });
+    var cherche = termeAccueil.toLowerCase();
+
+    if (cherche) {
+      fichiers = fichiers.map(function (f) {
+        var dansLeNom = f.nom.toLowerCase().indexOf(cherche) !== -1;
+        var position = f.texte ? f.texte.toLowerCase().indexOf(cherche) : -1;
+        if (!dansLeNom && position === -1) return null;
+        var copie = Object.assign({}, f);
+        copie.extrait = position === -1 ? null : extrait(f.texte, position, cherche.length);
+        return copie;
+      }).filter(Boolean);
+    }
+
     elRecents.innerHTML = '';
-    elVide.hidden = fichiers.length > 0;
+    elVide.hidden = cherche ? true : fichiers.length > 0;
+    $('#recherche-vide').hidden = !(cherche && fichiers.length === 0);
 
     fichiers.forEach(function (fichier) {
       var li = document.createElement('li');
@@ -279,7 +304,20 @@
 
       ouvrir.appendChild(nom);
       ouvrir.appendChild(meta);
-      ouvrir.addEventListener('click', function () { rouvrir(fichier.id); });
+
+      if (fichier.extrait) {
+        var ligne = document.createElement('span');
+        ligne.className = 'recent-extrait';
+        ligne.appendChild(document.createTextNode(fichier.extrait.avant));
+        var surligne = document.createElement('mark');
+        surligne.textContent = fichier.extrait.motif;
+        ligne.appendChild(surligne);
+        ligne.appendChild(document.createTextNode(fichier.extrait.apres));
+        ouvrir.appendChild(ligne);
+      }
+
+      var termeClic = termeAccueil;
+      ouvrir.addEventListener('click', function () { rouvrir(fichier.id, termeClic); });
 
       var retirer = document.createElement('button');
       retirer.className = 'recent-retirer';
@@ -295,7 +333,7 @@
     });
   }
 
-  function rouvrir(id) {
+  function rouvrir(id, terme) {
     var fichier = listeRecents().filter(function (f) { return f.id === id; })[0];
     if (!fichier) return;
     if (!fichier.texte) {
@@ -303,7 +341,7 @@
       elInput.click();
       return;
     }
-    afficher(fichier.texte, fichier.nom, fichier.format);
+    afficher(fichier.texte, fichier.nom, fichier.format, terme);
   }
 
   /* ----------------------------------------------------------- */
@@ -313,11 +351,12 @@
   marked.use({ gfm: true, breaks: false });
 
   var elDoc      = $('#doc');
+  var htmlDocument = null;     // le HTML du document, sans surlignage
   var elTitre     = $('#doc-title');
   var elProgress = $('#progress');
   var elToTop    = $('#to-top');
 
-  function afficher(texte, nomFichier, format) {
+  function afficher(texte, nomFichier, format, terme) {
     var html;
     try {
       html = FORMATS[format || formatActif].rendu(texte);
@@ -341,6 +380,9 @@
       wrap.appendChild(table);
     });
 
+    // On garde le HTML propre : la recherche le reconstruit a chaque frappe.
+    htmlDocument = elDoc.innerHTML;
+
     // Le bouton Retour d'Android doit ramener a l'accueil, pas fermer l'app.
     if (history.state && history.state.menu) history.replaceState({ vue: 'accueil' }, '');
     if (document.body.dataset.vue !== 'doc') history.pushState({ vue: 'doc' }, '');
@@ -350,6 +392,8 @@
     document.title = (nomFichier || 'Document') + ' — AppArq';
     window.scrollTo(0, 0);
     majProgression();
+
+    if (terme) ouvrirRecherche(terme);
   }
 
   function ouvrirFichier(file) {
@@ -382,14 +426,150 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 7. Navigation (fleche retour, bouton Retour d'Android)      */
+  /* 7. Recherche                                                */
+  /*    - dans un document : surligne et fait defiler            */
+  /*    - sur l'accueil    : filtre les fichiers recents         */
   /* ----------------------------------------------------------- */
+
+  var elRecherche = $('#recherche');
+  var elChamp     = $('#recherche-champ');
+  var elCompteur  = $('#recherche-compteur');
+
+  var marques = [];            // les <mark> du document
+  var indexMarque = 0;
+  var MAX_MARQUES = 2000;      // garde-fou sur les tres gros documents
+  var minuteur;
+
+  function ouvrirRecherche(terme) {
+    elRecherche.hidden = false;
+    if (typeof terme === 'string') elChamp.value = terme;
+    lancerRecherche();
+    elChamp.focus();
+    elChamp.select();
+  }
+
+  function fermerRecherche() {
+    elRecherche.hidden = true;
+    elChamp.value = '';
+    elCompteur.textContent = '';
+    if (termeAccueil) { termeAccueil = ''; majAccueil(); }
+    restaurerDocument();
+  }
+
+  function restaurerDocument() {
+    if (marques.length && htmlDocument !== null) elDoc.innerHTML = htmlDocument;
+    marques = [];
+    indexMarque = 0;
+  }
+
+  function lancerRecherche() {
+    var terme = elChamp.value.trim();
+    if (document.body.dataset.vue === 'doc') chercherDansDocument(terme);
+    else { termeAccueil = terme; majAccueil(); }
+  }
+
+  function chercherDansDocument(terme) {
+    restaurerDocument();
+    if (!terme) { elCompteur.textContent = ''; return; }
+
+    var cible = terme.toLowerCase();
+    var parcours = document.createTreeWalker(elDoc, NodeFilter.SHOW_TEXT);
+    var noeuds = [];
+    while (parcours.nextNode()) noeuds.push(parcours.currentNode);
+
+    noeuds.forEach(function (noeud) {
+      if (marques.length >= MAX_MARQUES) return;
+      var texte = noeud.nodeValue;
+      var bas = texte.toLowerCase();
+      var i = bas.indexOf(cible);
+      if (i === -1) return;
+
+      var morceaux = document.createDocumentFragment();
+      var position = 0;
+      while (i !== -1 && marques.length < MAX_MARQUES) {
+        if (i > position) morceaux.appendChild(document.createTextNode(texte.slice(position, i)));
+        var marque = document.createElement('mark');
+        marque.className = 'surlignage';
+        marque.textContent = texte.slice(i, i + cible.length);
+        morceaux.appendChild(marque);
+        marques.push(marque);
+        position = i + cible.length;
+        i = bas.indexOf(cible, position);
+      }
+      if (position < texte.length) morceaux.appendChild(document.createTextNode(texte.slice(position)));
+      noeud.parentNode.replaceChild(morceaux, noeud);
+    });
+
+    if (!marques.length) {
+      elCompteur.textContent = 'aucun';
+      return;
+    }
+    indexMarque = 0;
+    allerAuResultat(0);
+  }
+
+  function allerAuResultat(pas) {
+    if (!marques.length) return;
+    marques[indexMarque].classList.remove('actif');
+    indexMarque = (indexMarque + pas + marques.length) % marques.length;
+    var marque = marques[indexMarque];
+    marque.classList.add('actif');
+    marque.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    elCompteur.textContent = (indexMarque + 1) + ' / ' + marques.length
+                           + (marques.length === MAX_MARQUES ? '+' : '');
+  }
+
+  $('#btn-recherche').addEventListener('click', function () {
+    if (elRecherche.hidden) ouvrirRecherche('');
+    else fermerRecherche();
+  });
+  $('#recherche-fermer').addEventListener('click', fermerRecherche);
+  $('#recherche-suiv').addEventListener('click', function () { allerAuResultat(1); });
+  $('#recherche-prec').addEventListener('click', function () { allerAuResultat(-1); });
+
+  elChamp.addEventListener('input', function () {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(lancerRecherche, 170);
+  });
+
+  elChamp.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(minuteur);
+      if (!marques.length) lancerRecherche();
+      else allerAuResultat(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Escape') {
+      fermerRecherche();
+    }
+  });
+
+  // Ctrl+F (ou Cmd+F) ouvre la recherche de l'application.
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      ouvrirRecherche(elChamp.value);
+    }
+  });
+
+  /* ----------------------------------------------------------- */
+  /* 8. Navigation (fleche retour, bouton Retour d'Android)      */
+  /* ----------------------------------------------------------- */
+
+  var vuePrecedente = null;
 
   function appliquerEtat(etat) {
     var vue = (etat && etat.vue) || 'accueil';
     var menuOuvert = !!(etat && etat.menu);
 
     document.body.dataset.vue = vue;
+    if (vue !== vuePrecedente) {          // on change d'ecran : recherche remise a zero
+      vuePrecedente = vue;
+      elRecherche.hidden = true;
+      elChamp.value = '';
+      elCompteur.textContent = '';
+      termeAccueil = '';
+      restaurerDocument();
+    }
     if (menuOuvert) document.body.dataset.menu = 'ouvert';
     else delete document.body.dataset.menu;
 
@@ -413,7 +593,7 @@
   window.addEventListener('popstate', function (e) { appliquerEtat(e.state); });
 
   /* ----------------------------------------------------------- */
-  /* 8. Confort de lecture                                       */
+  /* 9. Confort de lecture                                       */
   /* ----------------------------------------------------------- */
 
   var taille = parseInt(lire(STORE.size), 10) || 17;
@@ -471,7 +651,7 @@
   });
 
   /* ----------------------------------------------------------- */
-  /* 9. Fichier recu par "Partager" depuis Android               */
+  /* 10. Fichier recu par "Partager" depuis Android               */
   /* ----------------------------------------------------------- */
 
   function recupererPartage() {
@@ -491,7 +671,7 @@
   }
 
   /* ----------------------------------------------------------- */
-  /* 10. Demarrage                                               */
+  /* 11. Demarrage                                              */
   /* ----------------------------------------------------------- */
 
   function demarrer() {
