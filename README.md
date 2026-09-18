@@ -55,30 +55,18 @@ dans l'application. La croix à droite retire une ligne de la liste.
 La recherche ne tient pas compte des majuscules, mais elle est sensible aux
 accents : « reunion » ne trouvera pas « réunion ».
 
-**Deux formats sont reconnus**, listés dans le menu latéral :
+**Deux façons de lire un document**, avec le bouton `‹ ›` de la barre du haut :
 
-- **Markdown** (`.md`, `.markdown`, `.txt`) — affiché mis en forme ;
-- **HTML** (`.html`, `.htm`) — affiché mis en forme lui aussi, mais le bouton
-  `< >` le **reconvertit en Markdown**. C'est le chemin inverse : un texte déjà
-  mis en forme redevient du Markdown, avec ses `#`, ses `*`, ses listes et ses
-  tableaux. « Copier tout » copie alors ce Markdown reconstruit.
+- **mise en page propre** (par défaut) — l'application interprète le Markdown :
+  les `*` deviennent de l'italique ou du gras, les `#` deviennent des titres, et
+  ces marqueurs disparaissent de l'affichage ;
+- **texte brut** — le fichier tel qu'il est écrit, tous les caractères
+  apparents, dans une police à chasse fixe. C'est la vue à utiliser pour copier
+  du texte et le recoller ailleurs sans rien perdre. Un bouton **Copier tout**
+  y copie le fichier entier en un geste.
 
-Le format est deviné d'après l'extension du fichier : ouvrir un `.html` depuis
-la page Markdown bascule tout seul sur le bon format.
-
-**Coller du texte mis en forme** : sur la page HTML, le bouton *Coller du texte
-mis en forme* ouvre un cadre. Colle dedans du texte copié depuis une page web ou
-un traitement de texte : sa mise en forme est reconvertie en Markdown. Si tu
-colles du texte simple, il est lu tel quel, sans conversion.
-
-**Mise en forme ou texte d'origine** (bouton `< >` pendant la lecture) : par
-défaut l'application *interprète* le Markdown — les `*` deviennent de l'italique
-ou du gras, les `#` deviennent des titres, et ces marqueurs disparaissent de
-l'affichage. Le bouton `< >` montre le fichier **tel qu'il est écrit**, marqueurs
-compris, dans une police à chasse fixe. C'est cette vue qu'il faut utiliser pour
-copier du texte et le recoller ailleurs sans rien perdre. Un bouton **Copier
-tout** y copie le fichier entier en un geste. Ton choix est mémorisé : si tu
-préfères toujours le texte brut, l'application s'ouvrira dessus.
+Ton choix est mémorisé : si tu préfères toujours le texte brut, l'application
+s'ouvrira dessus. Au premier document lu, un message signale le bouton.
 
 **Copier du texte** : seul le texte du document est sélectionnable. La barre du
 haut, le menu et les boutons ne le sont pas, ce qui évite que la sélection
@@ -98,7 +86,7 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | ☰ | Ouvrir le menu des formats (sur l'accueil) |
 | ← | Revenir à la page d'accueil (pendant la lecture) |
 | 🔍 | Rechercher : dans les fichiers sur l'accueil, dans le texte pendant la lecture |
-| `< >` | Basculer entre mise en forme et texte d'origine (pendant la lecture) |
+| `‹ ›` | Basculer entre mise en page propre et texte brut (pendant la lecture) |
 | 📁 | Ouvrir un fichier (sur l'accueil) |
 | A− / A+ | Réduire ou agrandir le texte (mémorisé) |
 | 🌗 | Basculer entre thème automatique, clair et sombre |
@@ -128,14 +116,12 @@ Markdown standard (GitHub Flavored Markdown).
 | `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
 | `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
 | `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
-| `vendor/` | Trois bibliothèques externes, copiées ici pour marcher hors connexion |
+| `vendor/` | Deux bibliothèques externes, copiées ici pour marcher hors connexion |
 
 **Les bibliothèques utilisées :**
-[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML,
-[Turndown](https://github.com/mixmark-io/turndown) fait le chemin inverse
-(HTML vers Markdown), et [DOMPurify](https://github.com/cure53/DOMPurify)
-nettoie le HTML pour qu'un fichier piégé ne puisse rien exécuter. Leurs licences
-sont dans `vendor/`.
+[marked](https://github.com/markedjs/marked) transforme le Markdown en HTML, et
+[DOMPurify](https://github.com/cure53/DOMPurify) nettoie ce HTML pour qu'un
+fichier piégé ne puisse rien exécuter. Leurs licences sont dans `vendor/`.
 
 ---
 
@@ -160,7 +146,7 @@ Quelques exemples faciles pour commencer :
 - **Ajouter un format de fichier** : tout est prévu pour. En haut de `app.js`, la
   liste `FORMATS` décrit chaque format : son nom, sa pastille, les extensions
   acceptées, la fonction `rendu` (fichier → affichage mis en forme) et la
-  fonction `source` (ce que montre le bouton `< >`, avec sa mention). Ajoute une
+  fonction `source` (ce que montre le bouton `‹ ›`, avec sa mention). Ajoute une
   entrée, ajoute sa clé dans `ORDRE`, et le menu latéral, la page d'accueil,
   l'historique et la détection par extension s'adaptent tout seuls.
 
@@ -168,11 +154,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=9` → `style.css?v=10` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v10';` → `'v11'`.
+> 1. dans `index.html` : `style.css?v=10` → `style.css?v=11` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v11';` → `'v12'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=10` est une adresse qu'il n'a jamais vue.
+> `style.css?v=11` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

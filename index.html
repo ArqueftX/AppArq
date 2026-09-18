@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=9">
+<link rel="stylesheet" href="./style.css?v=10">
 </head>
 <body data-vue="accueil">
 
@@ -28,7 +28,7 @@
     <button id="btn-recherche" class="icon-btn" aria-label="Rechercher" title="Rechercher">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 0 1 4.6 9.9l5.1 5.1-1.4 1.4-5.1-5.1A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
     </button>
-    <button id="btn-mode" class="icon-btn" aria-label="Voir le texte d'origine" title="Texte d'origine">
+    <button id="btn-mode" class="icon-btn" aria-label="Afficher le texte brut" title="Texte brut">
       <svg id="icone-mode" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
     </button>
     <button id="btn-open" class="icon-btn" aria-label="Ouvrir un fichier" title="Ouvrir un fichier">
@@ -89,16 +89,6 @@
 
     <button id="btn-open-big" class="primary-btn">Ouvrir un fichier</button>
 
-    <button id="btn-coller" class="secondaire" type="button" hidden>Coller du texte mis en forme</button>
-
-    <div id="collage" class="collage" hidden>
-      <div id="collage-zone" class="collage-zone" contenteditable="true" role="textbox"
-           aria-label="Zone de collage" data-vide="Colle ton texte ici"></div>
-      <p class="collage-aide">
-        Appuie longuement dans le cadre, puis choisis <strong>Coller</strong>.
-        Le texte mis en forme sera reconverti en Markdown.
-      </p>
-    </div>
 
     <h3 class="section-titre">Fichiers récents</h3>
     <ul id="recents" class="recents"></ul>
@@ -119,7 +109,7 @@
   <!-- ===================== TEXTE D'ORIGINE ===================== -->
   <section id="source" class="source">
     <div class="source-barre">
-      <span class="source-mention">Texte d'origine, non transformé</span>
+      <span class="source-mention">Texte brut, tous les caractères apparents</span>
       <button id="btn-copier" class="petit-btn" type="button">Copier tout</button>
     </div>
     <pre id="source-texte"></pre>
@@ -137,7 +127,6 @@
 
 <script src="./vendor/marked.umd.js"></script>
 <script src="./vendor/purify.min.js"></script>
-<script src="./vendor/turndown.umd.js"></script>
-<script src="./app.js?v=8"></script>
+<script src="./app.js?v=9"></script>
 </body>
 </html>

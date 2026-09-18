@@ -48,15 +48,12 @@
             "text/markdown",
             "text/x-markdown",
             "text/plain",
-            "text/html",
             "application/octet-stream",
             ".md",
             ".markdown",
             ".mdown",
             ".mkd",
-            ".txt",
-            ".html",
-            ".htm"
+            ".txt"
           ]
         }
       ]
@@ -71,10 +68,6 @@
           ".markdown",
           ".mdown",
           ".mkd"
-        ],
-        "text/html": [
-          ".html",
-          ".htm"
         ],
         "text/plain": [
           ".txt"
