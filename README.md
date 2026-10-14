@@ -45,6 +45,7 @@ propre et une version brute :
 | **Markdown** (`.md`, `.txt`) | Le texte mis en forme | Le fichier lui-même, inchangé |
 | **EPUB** (`.epub`) | Les chapitres du livre, mis en forme | Du Markdown reconstruit par l'application |
 | **PDF** (`.pdf`) | Les vraies pages du document | Du Markdown reconstruit par l'application |
+| **Image** (`.png`, `.jpg`…) | L'image elle-même | Le texte **reconnu** dans l'image |
 
 Pour le **PDF**, la version propre affiche le document **tel qu'il est**, page
 par page : mise en page, colonnes, tableaux, polices — tout est fidèle, puisque
@@ -61,6 +62,17 @@ listes, lit les deux colonnes dans le bon ordre au lieu de les entrelacer, et
 écarte les en-têtes et numéros de page répétés. C'est perfectible par nature —
 mais ce n'est plus la seule façon de lire le document. Sur un PDF scanné, elle
 indique simplement qu'il n'y a pas de texte à extraire.
+
+Pour une **image** — une capture d'écran, une photo d'un texte — l'application
+**reconnaît les caractères** et en tire le texte, que tu peux alors copier. La
+reconnaissance tourne entièrement dans le téléphone : aucune image n'est envoyée
+nulle part. Le moteur et les dictionnaires (français et anglais) pèsent 7,5 Mo :
+ils ne sont téléchargés qu'à la première image lue, puis gardés en mémoire, y
+compris pour les suivantes hors connexion. Compte quelques secondes par capture.
+
+Trois façons d'y arriver : ouvrir l'image depuis l'app, la partager depuis la
+galerie ou l'éditeur de capture d'écran (**Partager → AppArq**), ou la coller
+avec le bouton **Coller une image** sur la page du format.
 
 Pour l'**EPUB**, un livre numérique est une archive : l'application en extrait
 les chapitres dans l'ordre. Les images des livres et des PDF ne sont pas
@@ -205,17 +217,19 @@ Markdown standard (GitHub Flavored Markdown).
 | `icons/logo.svg` | Le logo « AA » en vectoriel, source de toutes les icônes |
 | `tools/make_logo.py` | Construit `logo.svg` à partir d'une dizaine de mesures |
 | `tools/rasterise-logo.js` | Produit les PNG aux tailles attendues par Android |
-| `vendor/` | Cinq bibliothèques externes, copiées ici pour marcher hors connexion |
+| `vendor/` | Six bibliothèques externes, copiées ici pour marcher hors connexion |
 
-**Les bibliothèques utilisées :** (pdf.js pèse à lui seul 1,8 Mo, soit bien plus
-que tout le reste : il n'est donc téléchargé qu'à la première ouverture d'un
-PDF, puis gardé dans un cache qui survit aux mises à jour de l'application.)
+**Les bibliothèques utilisées :** (pdf.js pèse 1,8 Mo et la reconnaissance de
+texte 7,5 Mo, soit bien plus que tout le reste : ils ne sont téléchargés qu'à la
+première ouverture d'un PDF ou d'une image, puis gardés dans un cache qui
+survit aux mises à jour de l'application.)
 
 [marked](https://github.com/markedjs/marked) transforme le Markdown en HTML,
 [Turndown](https://github.com/mixmark-io/turndown) fait le chemin inverse pour
 les EPUB et les PDF, [fflate](https://github.com/101arrowz/fflate) ouvre
 l'archive d'un EPUB, [pdf.js](https://github.com/mozilla/pdf.js) lit les PDF, et
-[DOMPurify](https://github.com/cure53/DOMPurify) nettoie le HTML
+[Tesseract.js](https://github.com/naptha/tesseract.js) reconnaît le texte des
+images, et [DOMPurify](https://github.com/cure53/DOMPurify) nettoie le HTML
 pour qu'un fichier piégé ne puisse rien exécuter. Leurs licences sont dans
 `vendor/`.
 
@@ -259,11 +273,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=18` → `style.css?v=19` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v25';` → `'v26'`.
+> 1. dans `index.html` : `style.css?v=19` → `style.css?v=20` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v26';` → `'v27'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=19` est une adresse qu'il n'a jamais vue.
+> `style.css?v=20` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

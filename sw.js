@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v25';
+var VERSION = 'v26';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 // Les grosses bibliotheques chargees a la demande (pdf.js) sont gardees a part :
@@ -64,7 +64,9 @@ function traiterPartage(request) {
     var fichier = fichiers && fichiers.length ? fichiers[0] : null;
 
     // Un livre EPUB est une archive : on le garde tel quel, en binaire.
-    if (fichier && /\.(epub|pdf)$/i.test(fichier.name || '')) {
+    var estBinaire = fichier && (/\.(epub|pdf|png|jpe?g|webp|gif|bmp|avif)$/i.test(fichier.name || '')
+                                 || /^image\//.test(fichier.type || ''));
+    if (estBinaire) {
       return caches.open(CACHE_PARTAGE).then(function (cache) {
         return cache.put(new URL('__partage-livre__', self.registration.scope).href,
           new Response(fichier, {

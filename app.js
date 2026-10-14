@@ -66,11 +66,32 @@
       binaire: true,
       pages: true,                  // la version propre affiche les vraies pages
       extraire: extrairePdf,
+      rendreFichier: rendrePages,
       rendu: function (texte) {
         return nettoyerHtml(texte);  // secours, si le fichier n'est plus en memoire
       },
       source: function (texte) {
         return { texte: htmlVersMarkdown(texte), mention: 'Texte du PDF, converti en Markdown' };
+      }
+    },
+
+    image: {
+      nom: 'Image',
+      pastille: 'OCR',
+      detail: "Captures d'écran et photos — le texte est reconnu",
+      bouton: 'Ouvrir une image',
+      accept: 'image/*,.png,.jpg,.jpeg,.webp',
+      extensions: /\.(png|jpe?g|webp|gif|bmp|avif)$/i,
+      binaire: true,
+      pages: true,                  // on garde le fichier et on l'affiche tel quel
+      collage: true,                // on peut aussi coller une image
+      rendreFichier: afficherImage,
+      extraire: reconnaitreTexte,
+      rendu: function (texte) {
+        return nettoyerHtml(texte);
+      },
+      source: function (texte) {
+        return { texte: htmlVersMarkdown(texte), mention: "Texte reconnu dans l'image" };
       }
     }
   };
@@ -151,6 +172,91 @@
     if (!morceaux.length) throw new Error('livre vide');
 
     return { texte: morceaux.join('\n<hr />\n'), nom: titre };
+  }
+
+  /* ----- images : affichage et reconnaissance du texte ---------------- */
+
+  var adresseImage = null;
+
+  function afficherImage(conteneur, donnees) {
+    if (adresseImage) { URL.revokeObjectURL(adresseImage); adresseImage = null; }
+    conteneur.innerHTML = '';
+
+    adresseImage = URL.createObjectURL(new Blob([donnees]));
+    var image = document.createElement('img');
+    image.className = 'image-ouverte';
+    image.alt = '';
+    image.src = adresseImage;
+    conteneur.appendChild(image);
+
+    return new Promise(function (resoudre) {
+      image.onload = function () { mesurerHauteur(); resoudre(); };
+      image.onerror = function () { resoudre(); };
+    });
+  }
+
+  // La reconnaissance de caracteres tourne entierement dans le telephone :
+  // aucune image n'est envoyee nulle part. Le moteur et les dictionnaires
+  // pesent 7,5 Mo : ils ne sont telecharges qu'a la premiere image, puis
+  // gardes en cache.
+  var ocr = null;
+  function chargerOcr() {
+    if (ocr) return ocr;
+    ocr = new Promise(function (resoudre, rejeter) {
+      var balise = document.createElement('script');
+      balise.src = './vendor/tesseract/tesseract.min.js';
+      balise.onload = function () { resoudre(window.Tesseract); };
+      balise.onerror = function () { rejeter(new Error('moteur indisponible')); };
+      document.head.appendChild(balise);
+    });
+    return ocr;
+  }
+
+  var ouvrierOcr = null;
+  var suiviOcr = null;
+
+  function obtenirOuvrier() {
+    if (ouvrierOcr) return ouvrierOcr;
+    var base = function (fichier) { return new URL('./vendor/tesseract/' + fichier, location.href).href; };
+    ouvrierOcr = chargerOcr().then(function (Tesseract) {
+      return Tesseract.createWorker(['fra', 'eng'], 1, {
+        workerPath: base('worker.min.js'),
+        corePath: base('tesseract-core-simd-lstm.wasm.js'),
+        langPath: new URL('./vendor/tesseract/', location.href).href,
+        logger: function (message) { if (suiviOcr) suiviOcr(message); }
+      });
+    });
+    return ouvrierOcr;
+  }
+
+  function reconnaitreTexte(donnees, avancement) {
+    suiviOcr = function (message) {
+      if (!avancement) return;
+      if (message.status === 'recognizing text') avancement(message.progress || 0, 'lecture');
+      else avancement(0, 'preparation');
+    };
+    if (avancement) avancement(0, 'preparation');
+
+    return obtenirOuvrier().then(function (ouvrier) {
+      return ouvrier.recognize(new Blob([donnees]));
+    }).then(function (resultat) {
+      suiviOcr = null;
+      var texte = (resultat && resultat.data && resultat.data.text) || '';
+      if (!texte.trim()) throw new Error('image sans texte');
+
+      // Les retours a la ligne de l'image ne sont pas des fins de paragraphe :
+      // on ne coupe qu'aux lignes vides.
+      var paragraphes = texte.split(/\n\s*\n+/)
+        .map(function (bloc) { return bloc.replace(/\s*\n\s*/g, ' ').trim(); })
+        .filter(Boolean);
+
+      return { texte: paragraphes.map(function (bloc) {
+        return '<p>' + echapper(bloc) + '</p>';
+      }).join('\n') };
+    }).catch(function (e) {
+      suiviOcr = null;
+      throw e;
+    });
   }
 
   /* ----- lecture des fichiers PDF ------------------------------------ */
@@ -729,7 +835,7 @@
     return null;
   }
 
-  var ORDRE = ['markdown', 'epub', 'pdf'];   // ordre d'affichage dans le menu
+  var ORDRE = ['markdown', 'epub', 'pdf', 'image'];   // ordre d'affichage dans le menu
   var formatActif = 'markdown';
   var termeAccueil = '';           // filtre en cours sur la liste des fichiers
 
@@ -1023,6 +1129,10 @@
     $('#format-detail').textContent = format.detail;
     $('#btn-open-big').textContent = format.bouton;
     elInput.setAttribute('accept', format.accept);
+    var coller = $('#btn-coller');
+    coller.hidden = !format.collage;
+    coller.textContent = 'Coller une image';
+    $('#collage').hidden = true;
     majAccueil();
   }
 
@@ -1193,16 +1303,24 @@
     elSourceTexte.textContent = 'Préparation du texte…';
     $('.source-mention').textContent = 'Texte en cours de préparation';
 
-    Promise.resolve(reglages.extraire(donnees)).then(function (extrait) {
+    Promise.resolve(reglages.extraire(donnees, function (fraction, etape) {
+      if (jeton !== sourceEnCours) return;
+      elSourceTexte.textContent = etape === 'lecture'
+        ? 'Reconnaissance du texte… ' + Math.round(fraction * 100) + ' %'
+        : 'Préparation de la reconnaissance…';
+    })).then(function (extrait) {
       if (jeton !== sourceEnCours) return;
       htmlExtrait = extrait.texte;
       $('#btn-essentiel').hidden = false;
       appliquerFiltre(reglages);
     }).catch(function (e) {
       if (jeton !== sourceEnCours) return;
-      elSourceTexte.textContent = /sans texte/.test((e && e.message) || '')
-        ? "Ce PDF ne contient pas de texte : il a sans doute été scanné."
-        : "Le texte de ce PDF n'a pas pu être extrait.";
+      var message = (e && e.message) || '';
+      elSourceTexte.textContent =
+          /image sans texte/.test(message) ? "Aucun texte n'a été reconnu dans cette image."
+        : /sans texte/.test(message) ? "Ce PDF ne contient pas de texte : il a sans doute été scanné."
+        : /moteur/.test(message) ? "La reconnaissance de texte n'a pas pu être chargée."
+        : "Le texte de ce fichier n'a pas pu être extrait.";
       $('.source-mention').textContent = 'Texte indisponible';
     });
   }
@@ -1241,11 +1359,11 @@
     arreterPdf();
     elDoc.classList.remove('pages-pdf');
 
-    if (reglages.pages && donnees) {
-      // version propre : le document tel qu'il est, page par page
+    if (reglages.rendreFichier && donnees) {
+      // version propre : le document tel qu'il est
       elDoc.innerHTML = '';
-      rendrePages(elDoc, donnees).catch(function () {
-        toast("Ce PDF n'a pas pu être affiché.");
+      Promise.resolve(reglages.rendreFichier(elDoc, donnees)).catch(function () {
+        toast("Ce fichier n'a pas pu être affiché.");
       });
       preparerSourceDifferee(reglages, donnees);
     } else {
@@ -1302,6 +1420,54 @@
       }, 1000);
     }
   }
+
+  // Ouvre un fichier binaire deja lu (image collee, fichier partage...).
+  function ouvrirDonneesBinaires(nom, donnees, format) {
+    if (format !== formatActif) choisirFormat(format);
+    var entree = ajouterRecent(nom, '', format, donnees.byteLength);
+    rangerFichier(entree.id, donnees.slice(0));
+    afficher('', nom, format, null, donnees);
+  }
+
+  var elCollage = $('#collage');
+  var elZoneCollage = $('#collage-zone');
+
+  $('#btn-coller').addEventListener('click', function () {
+    elCollage.hidden = !elCollage.hidden;
+    if (!elCollage.hidden) { elZoneCollage.textContent = ''; elZoneCollage.focus(); }
+  });
+
+  elZoneCollage.addEventListener('paste', function (e) {
+    var presse = e.clipboardData;
+    if (!presse) return;
+    e.preventDefault();
+
+    var fichiers = presse.files && presse.files.length ? presse.files : null;
+    var image = null;
+    if (fichiers) {
+      for (var i = 0; i < fichiers.length; i++) {
+        if (/^image\//.test(fichiers[i].type)) { image = fichiers[i]; break; }
+      }
+    }
+
+    if (image) {
+      image.arrayBuffer().then(function (donnees) {
+        ouvrirDonneesBinaires(image.name || 'Image collée', donnees, 'image');
+      }).catch(function () { toast("Cette image n'a pas pu être lue."); });
+    } else {
+      var texte = presse.getData('text/plain');
+      if (texte && texte.trim()) {
+        if (formatActif !== 'markdown') choisirFormat('markdown');
+        ajouterRecent('Texte collé', texte, 'markdown');
+        afficher(texte, 'Texte collé', 'markdown');
+      } else {
+        toast("Le presse-papier ne contient pas d'image.");
+        return;
+      }
+    }
+    elZoneCollage.textContent = '';
+    elCollage.hidden = true;
+  });
 
   function ouvrirFichier(file) {
     if (!file) return;
@@ -2035,7 +2201,9 @@
           var nom = decodeURIComponent(livre.headers.get('X-Nom') || 'document');
           return livre.arrayBuffer().then(function (donnees) {
             cache.delete(cleLivre);
-            var format = formatPourFichier(nom) || 'epub';
+            var type = livre.headers.get('Content-Type') || '';
+            var format = formatPourFichier(nom)
+                      || (/^image\//.test(type) ? 'image' : 'epub');
             if (FORMATS[format].pages) {
               if (formatActif !== format) choisirFormat(format);
               var entree = ajouterRecent(nom, '', format, donnees.byteLength);

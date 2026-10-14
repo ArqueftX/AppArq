@@ -50,6 +50,7 @@
             "text/plain",
             "application/epub+zip",
             "application/pdf",
+            "image/*",
             "application/octet-stream",
             ".md",
             ".markdown",
@@ -57,7 +58,11 @@
             ".mkd",
             ".txt",
             ".epub",
-            ".pdf"
+            ".pdf",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp"
           ]
         }
       ]
@@ -78,6 +83,16 @@
         ],
         "application/pdf": [
           ".pdf"
+        ],
+        "image/png": [
+          ".png"
+        ],
+        "image/jpeg": [
+          ".jpg",
+          ".jpeg"
+        ],
+        "image/webp": [
+          ".webp"
         ],
         "text/plain": [
           ".txt"

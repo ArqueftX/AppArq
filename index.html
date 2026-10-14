@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-180.png">
-<link rel="stylesheet" href="./style.css?v=18">
+<link rel="stylesheet" href="./style.css?v=19">
 </head>
 <body data-vue="accueil">
 
@@ -94,6 +94,17 @@
 
     <button id="btn-open-big" class="primary-btn">Ouvrir un fichier</button>
 
+    <button id="btn-coller" class="secondaire" type="button" hidden>Coller une image</button>
+
+    <div id="collage" class="collage" hidden>
+      <div id="collage-zone" class="collage-zone" contenteditable="true" role="textbox"
+           aria-label="Zone de collage" data-vide="Appuie ici, puis choisis Coller"></div>
+      <p class="collage-aide">
+        Appuie longuement dans le cadre, puis choisis <strong>Coller</strong>.
+        L'image collée sera lue et son texte reconnu.
+      </p>
+    </div>
+
 
     <h3 class="section-titre">Fichiers récents</h3>
     <ul id="recents" class="recents"></ul>
@@ -157,6 +168,6 @@
 <script src="./vendor/purify.min.js"></script>
 <script src="./vendor/fflate.umd.js"></script>
 <script src="./vendor/turndown.umd.js"></script>
-<script src="./app.js?v=22"></script>
+<script src="./app.js?v=23"></script>
 </body>
 </html>
