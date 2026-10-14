@@ -640,8 +640,9 @@ main {
 
 .source-barre {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 14px;
   padding: 9px 10px 9px 13px;
   background: var(--surface);
@@ -649,7 +650,7 @@ main {
   border-radius: var(--radius);
 }
 .source-mention {
-  flex: 1;
+  flex: 1 1 100%;
   min-width: 0;
   font-size: 13px;
   color: var(--muted);
@@ -667,6 +668,17 @@ main {
   cursor: pointer;
 }
 .petit-btn:active { transform: scale(.97); }
+
+.petit-btn.sobre {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.petit-btn.sobre[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--link);
+}
+.petit-btn[hidden] { display: none; }
 
 /* Chaque bloc porte lui-meme la conservation des espaces : le texte brut est
    decoupe en petits blocs pour que la selection demarre sans delai. */

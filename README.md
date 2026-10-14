@@ -102,6 +102,20 @@ accents : « reunion » ne trouvera pas « réunion ».
 Ton choix est mémorisé : si tu préfères toujours le texte brut, l'application
 s'ouvrira dessus. Au premier document lu, un message signale le bouton.
 
+**Lire une page web dans AppArq** : Chrome ne partage que le titre et l'adresse
+d'une page, jamais son contenu — l'application ne peut donc rien en faire
+directement. En revanche, **⋮ → Partager → Imprimer → Enregistrer au format
+PDF** produit un PDF de la page, qu'AppArq sait lire. Tout reste sur le
+téléphone.
+
+Dans la version brute d'un tel PDF, le bouton **Garder l'essentiel** ne conserve
+que les paragraphes qui comptent — une critique, un article — et écarte les
+menus, les encarts publicitaires, les mentions « Permalien », les pieds de page
+et les mentions légales. La règle est simple : sont gardés les blocs d'au moins
+25 mots, plus la ligne courte juste au-dessus (la note « 9/10 », le titre). Ton
+choix est mémorisé. Un texte très court peut donc passer à la trappe : le bouton
+**Tout afficher** rend l'intégralité.
+
 **Copier un passage sans tirer de poignée** (bouton 📋 pendant la lecture) : un
 assistant en deux étapes, pensé pour le téléphone où la sélection à la main est
 pénible sur un long texte.
@@ -225,11 +239,11 @@ Quelques exemples faciles pour commencer :
 > de version à deux endroits, sinon ton téléphone continuera d'afficher
 > l'ancienne version gardée en mémoire :
 >
-> 1. dans `index.html` : `style.css?v=17` → `style.css?v=18` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v23';` → `'v24'`.
+> 1. dans `index.html` : `style.css?v=18` → `style.css?v=19` (et pareil pour `app.js`) ;
+> 2. dans `sw.js` : `var VERSION = 'v24';` → `'v25'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
-> `style.css?v=18` est une adresse qu'il n'a jamais vue.
+> `style.css?v=19` est une adresse qu'il n'a jamais vue.
 
 ### Essayer sur un ordinateur
 

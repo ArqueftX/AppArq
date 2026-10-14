@@ -499,6 +499,43 @@
     });
   }
 
+  /* ----- ne garder que le texte qui compte ---------------------------- */
+
+  // Une page web imprimee en PDF ramene tout : barre de navigation, menus,
+  // encarts publicitaires, mentions legales. Les paragraphes qui nous
+  // interessent — une critique, un article — sont les seuls longs. On garde
+  // donc les blocs d'au moins 25 mots, plus la ligne courte qui les precede
+  // (la note « 9/10 », le titre de la critique), et on jette le reste.
+  var MOTS_MINIMUM = 25;
+
+  function compterMots(texte) {
+    return (texte || '').trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  function garderEssentiel(html) {
+    var bac = document.createElement('div');
+    bac.innerHTML = html;
+    var blocs = Array.prototype.slice.call(bac.children);
+    var gardes = [];
+
+    blocs.forEach(function (bloc, i) {
+      if (bloc.tagName === 'HR') return;
+      if (compterMots(bloc.textContent) < MOTS_MINIMUM) return;
+
+      var avant = blocs[i - 1];
+      if (avant && gardes.indexOf(avant) === -1 && avant.tagName !== 'HR') {
+        var entete = (avant.textContent || '').trim();
+        // une ligne courte juste au-dessus d'un long paragraphe : une note,
+        // un titre de critique, un intertitre
+        if (entete && compterMots(entete) <= 12) gardes.push(avant);
+      }
+      gardes.push(bloc);
+    });
+
+    if (!gardes.length) return html;         // rien de long : on ne filtre pas
+    return gardes.map(function (b) { return b.outerHTML; }).join('\n');
+  }
+
   /* ----- conversion HTML -> Markdown (pour la version brute) --------- */
 
   var convertisseur = null;
@@ -580,6 +617,7 @@
     size:    'apparq:taille-texte',
     mode:    'apparq:mode-lecture',
     format:  'apparq:format',
+    essentiel: 'apparq:essentiel',
     astuce:  'apparq:astuce-brut',
     theme:   'apparq:theme'
   };
@@ -1018,6 +1056,8 @@
   }
 
   var sourceEnCours = 0;
+  var htmlExtrait = null;                                   // texte du PDF, non filtre
+  var essentiel = lire(STORE.essentiel) === 'oui';
 
   // Pour un PDF, le texte de la vue brute est prepare en arriere-plan :
   // les pages s'affichent tout de suite, sans attendre l'extraction.
@@ -1029,10 +1069,9 @@
 
     Promise.resolve(reglages.extraire(donnees)).then(function (extrait) {
       if (jeton !== sourceEnCours) return;
-      var brut = reglages.source(extrait.texte);
-      texteOriginal = brut.texte;
-      remplirTexteBrut(brut.texte);
-      $('.source-mention').textContent = brut.mention;
+      htmlExtrait = extrait.texte;
+      $('#btn-essentiel').hidden = false;
+      appliquerFiltre(reglages);
     }).catch(function (e) {
       if (jeton !== sourceEnCours) return;
       elSourceTexte.textContent = /sans texte/.test((e && e.message) || '')
@@ -1042,9 +1081,37 @@
     });
   }
 
+  // Reconstruit la vue brute a partir du texte extrait, filtre ou non.
+  function appliquerFiltre(reglages) {
+    if (htmlExtrait === null) return;
+    var html = essentiel ? garderEssentiel(htmlExtrait) : htmlExtrait;
+    var brut = reglages.source(html);
+    texteOriginal = brut.texte;
+    remplirTexteBrut(brut.texte);
+    $('.source-mention').textContent = essentiel
+      ? 'Seulement les paragraphes principaux'
+      : brut.mention;
+    var bouton = $('#btn-essentiel');
+    bouton.textContent = essentiel ? 'Tout afficher' : "Garder l'essentiel";
+    bouton.setAttribute('aria-pressed', essentiel ? 'true' : 'false');
+  }
+
+  $('#btn-essentiel').addEventListener('click', function () {
+    essentiel = !essentiel;
+    ecrire(STORE.essentiel, essentiel ? 'oui' : 'non');
+    var reglages = FORMATS[formatActif];
+    appliquerFiltre(reglages);
+    toast(essentiel ? 'Menus, publicités et pieds de page écartés.'
+                    : 'Tout le texte du document est affiché.');
+    window.scrollTo(0, 0);
+    mesurerHauteur();
+  });
+
   function afficher(texte, nomFichier, format, terme, donnees) {
     var reglages = FORMATS[format || formatActif];
     sourceEnCours++;                       // annule une preparation en cours
+    htmlExtrait = null;
+    $('#btn-essentiel').hidden = true;
     arreterPdf();
     elDoc.classList.remove('pages-pdf');
 
