@@ -108,13 +108,33 @@ directement. En revanche, **⋮ → Partager → Imprimer → Enregistrer au for
 PDF** produit un PDF de la page, qu'AppArq sait lire. Tout reste sur le
 téléphone.
 
-Dans la version brute d'un tel PDF, le bouton **Garder l'essentiel** ne conserve
-que les paragraphes qui comptent — une critique, un article — et écarte les
-menus, les encarts publicitaires, les mentions « Permalien », les pieds de page
-et les mentions légales. La règle est simple : sont gardés les blocs d'au moins
-25 mots, plus la ligne courte juste au-dessus (la note « 9/10 », le titre). Ton
-choix est mémorisé. Un texte très court peut donc passer à la trappe : le bouton
-**Tout afficher** rend l'intégralité.
+Dans la version brute d'un tel PDF, le bouton **Garder l'essentiel** écarte le
+décor de la page — menus, encarts publicitaires, pieds de page, mentions
+légales. Il procède de deux façons :
+
+- **Page de critiques** (IMDb et pages de même forme) : l'application reconnaît
+  le motif d'une critique — une note, un titre, le texte, puis « Utile • 23 9 »
+  et la signature « pseudo date Permalien » — et reconstruit chacune proprement :
+
+  ```
+  ## 1 · 7/10 · Good start
+
+  mtoms-84267 · 19 sept. 2024 · Utile 23 · Contre 9 · Spoiler
+
+  Agatha is back. With a homage to The Killing…
+
+  ---
+  ```
+
+  Les critiques sont numérotées et séparées par un trait, le pseudo, la date et
+  les votes sont conservés, et les critiques signalées comme révélant l'intrigue
+  portent la mention « Spoiler ».
+
+- **Toute autre page** : sont gardés les blocs d'au moins 25 mots — le corps
+  d'un article — plus la ligne courte juste au-dessus. Un texte très court peut
+  donc passer à la trappe.
+
+Ton choix est mémorisé, et le bouton **Tout afficher** rend l'intégralité.
 
 **Copier un passage sans tirer de poignée** (bouton 📋 pendant la lecture) : un
 assistant en deux étapes, pensé pour le téléphone où la sélection à la main est
@@ -240,7 +260,7 @@ Quelques exemples faciles pour commencer :
 > l'ancienne version gardée en mémoire :
 >
 > 1. dans `index.html` : `style.css?v=18` → `style.css?v=19` (et pareil pour `app.js`) ;
-> 2. dans `sw.js` : `var VERSION = 'v24';` → `'v25'`.
+> 2. dans `sw.js` : `var VERSION = 'v25';` → `'v26'`.
 >
 > C'est le `?v=` qui oblige le navigateur à retélécharger le fichier : pour lui,
 > `style.css?v=19` est une adresse qu'il n'a jamais vue.

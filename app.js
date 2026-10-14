@@ -507,15 +507,131 @@
   // donc les blocs d'au moins 25 mots, plus la ligne courte qui les precede
   // (la note « 9/10 », le titre de la critique), et on jette le reste.
   var MOTS_MINIMUM = 25;
+  var nombreCritiques = 0;      // ce que le dernier filtrage a reconnu
 
   function compterMots(texte) {
     return (texte || '').trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  /* ----- pages de critiques (IMDb et consorts) ------------------------
+     Elles suivent toutes le meme motif : une note, un titre, le texte, puis
+     « Utile • 23 9 » et la signature « pseudo date Permalien ». On s'en sert
+     pour decouper proprement, et garder pseudo, votes et separation. */
+
+  var LIGNE_UTILE = /^(utile|helpful)\s*[•·:]?\s*(\d+)(?:\s*[•·\/]?\s*(\d+))?\s*$/i;
+  var LIGNE_SIGNATURE = /(permalien|permalink)\s*$/i;
+  var LIGNE_NOTE = /^(\d{1,2})\s*\/\s*10$/;
+  var LIGNE_SPOILER = /^s\s*p\s*o\s*i\s*l\s*e\s*r$/i;
+
+  function texteDe(bloc) { return (bloc.textContent || '').replace(/\s+/g, ' ').trim(); }
+
+  function decouperCritiques(blocs) {
+    var critiques = [];
+    var groupe = [];
+    var attenteSignature = null;
+
+    blocs.forEach(function (bloc) {
+      var t = texteDe(bloc);
+
+      if (attenteSignature) {
+        // la ligne qui suit « Utile » porte le pseudo et la date
+        var signature = t.replace(LIGNE_SIGNATURE, '').trim();
+        var morceaux = signature.split(' ');
+        attenteSignature.pseudo = morceaux.shift() || '';
+        attenteSignature.date = morceaux.join(' ').trim();
+        critiques.push(attenteSignature);
+        attenteSignature = null;
+        groupe = [];
+        return;
+      }
+
+      var votes = t.match(LIGNE_UTILE);
+      if (votes && groupe.length) {
+        attenteSignature = { blocs: groupe.slice(), utile: votes[2], contre: votes[3] || '0' };
+        return;
+      }
+
+      if (bloc.tagName !== 'HR' && t) groupe.push(bloc);
+    });
+
+    return critiques;
+  }
+
+  function mettreEnFormeCritique(critique, rang) {
+    var blocs = critique.blocs;
+
+    // Le debut de la critique : sa note. Tout ce qui precede (menus, bandeau
+    // de la page) est du decor, on le laisse de cote.
+    var depart = 0;
+    for (var i = blocs.length - 1; i >= 0; i--) {
+      if (LIGNE_NOTE.test(texteDe(blocs[i]))) { depart = i; break; }
+    }
+    blocs = blocs.slice(depart);
+
+    var note = null;
+    if (blocs.length && LIGNE_NOTE.test(texteDe(blocs[0]))) note = texteDe(blocs.shift());
+
+    var spoiler = false;
+    blocs = blocs.filter(function (bloc) {
+      if (LIGNE_SPOILER.test(texteDe(bloc))) { spoiler = true; return false; }
+      return true;
+    });
+
+    var titre = null;
+    if (blocs.length > 1 && texteDe(blocs[0]).split(' ').length <= 14) titre = texteDe(blocs.shift());
+
+    var entete = [String(rang)];
+    if (note) entete.push(note);
+    if (titre) entete.push(titre);
+
+    var details = [];
+    if (critique.pseudo) details.push(critique.pseudo);
+    if (critique.date) details.push(critique.date);
+    details.push('Utile ' + critique.utile);
+    details.push('Contre ' + critique.contre);
+    if (spoiler) details.push('Spoiler');
+
+    var sortie = ['<h2>' + echapper(entete.join(' · ')) + '</h2>',
+                  '<p>' + echapper(details.join(' · ')) + '</p>'];
+    blocs.forEach(function (bloc) { sortie.push(bloc.outerHTML); });
+    return sortie.join('\n');
+  }
+
+  function structurerCritiques(blocs) {
+    var critiques = decouperCritiques(blocs);
+    if (critiques.length < 2) return null;        // ce n'est pas une page de critiques
+
+    var sortie = [];
+
+    // le titre de l'oeuvre, juste avant « Avis des utilisateurs »
+    for (var i = 1; i < blocs.length; i++) {
+      if (/^(avis des utilisateurs|user reviews)$/i.test(texteDe(blocs[i]))) {
+        var avant = texteDe(blocs[i - 1]);
+        if (avant && avant.split(' ').length <= 14) {
+          sortie.push('<h1>' + echapper(avant) + '</h1>');
+        }
+        break;
+      }
+    }
+
+    critiques.forEach(function (critique, rang) {
+      if (rang > 0) sortie.push('<hr />');      // un trait entre deux critiques
+      sortie.push(mettreEnFormeCritique(critique, rang + 1));
+    });
+    nombreCritiques = critiques.length;
+    return sortie.join('\n');
   }
 
   function garderEssentiel(html) {
     var bac = document.createElement('div');
     bac.innerHTML = html;
     var blocs = Array.prototype.slice.call(bac.children);
+
+    // une page de critiques se reconnait et se decoupe bien mieux qu'au poids
+    nombreCritiques = 0;
+    var critiques = structurerCritiques(blocs);
+    if (critiques) return critiques;
+
     var gardes = [];
 
     blocs.forEach(function (bloc, i) {
@@ -547,6 +663,16 @@
       codeBlockStyle: 'fenced', emDelimiter: '*', strongDelimiter: '**',
       linkStyle: 'inlined'
     });
+
+    // Turndown protege par defaut tous les caracteres speciaux du Markdown :
+    // un pseudo comme « lor_ » devenait « lor\_ », illisible. Le texte d'un PDF
+    // ou d'un livre ne contient presque jamais de Markdown : on ne protege donc
+    // que ce qui changerait la structure, en debut de ligne.
+    convertisseur.escape = function (texte) {
+      return texte
+        .replace(/\\/g, '\\\\')
+        .replace(/^(\s*)([#>+=|-]|\d+\.)(\s)/gm, '$1\\$2$3');
+    };
 
     // Puces : un seul espace apres le tiret, au lieu de trois.
     convertisseur.addRule('puces', {
@@ -1088,9 +1214,9 @@
     var brut = reglages.source(html);
     texteOriginal = brut.texte;
     remplirTexteBrut(brut.texte);
-    $('.source-mention').textContent = essentiel
-      ? 'Seulement les paragraphes principaux'
-      : brut.mention;
+    $('.source-mention').textContent = !essentiel ? brut.mention
+      : (nombreCritiques ? nombreCritiques + ' critiques, décor de la page écarté'
+                         : 'Seulement les paragraphes principaux');
     var bouton = $('#btn-essentiel');
     bouton.textContent = essentiel ? 'Tout afficher' : "Garder l'essentiel";
     bouton.setAttribute('aria-pressed', essentiel ? 'true' : 'false');
