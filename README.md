@@ -189,7 +189,13 @@ d'Android (qui ferme aussi le menu latéral s'il est ouvert).
 | `‹ ›` | Basculer entre mise en page propre et texte brut (pendant la lecture) |
 | 📁 | Ouvrir un fichier (sur l'accueil) |
 | 📋 | Copier un passage en le désignant par ses mots (pendant la lecture) |
-| ⋮ | Réglages : taille du texte et thème |
+| ⋮ | Réglages : taille du texte, thème, affichage téléphone ou ordinateur |
+
+**Affichage** (⋮ → *Affichage*) : touche plusieurs fois pour passer de
+*automatique* à *téléphone* puis *ordinateur*. En *automatique*, un téléphone
+a toujours la mise en page téléphone, même tenu en paysage ou quand Chrome est
+réglé sur « Version pour ordinateur ». *Ordinateur* garde le menu des formats
+affiché en permanence à gauche. Le choix est mémorisé.
 
 Les 15 derniers fichiers restent proposés sur l'accueil, même après avoir fermé
 l'application. Les textes sont gardés jusqu'à environ 2 Mo au total : au-delà,

@@ -4,6 +4,8 @@
    --------------------------------------------------------------- */
 
 :root {
+  --vh: 1vh;
+  --vw: 1vw;
   --accent: #7c3aed;        /* violet des boutons */
   --link:   #6d28d9;        /* violet des liens (sur fond clair) */
   --bg: #ffffff;
@@ -199,7 +201,7 @@ body[data-vue="accueil"] #recherche-compteur { display: none; }
 .feuille-corps {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  max-height: 88vh;
+  max-height: calc(88 * var(--vh));
   overflow-y: auto;
   padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
   background: var(--bg);
@@ -207,14 +209,13 @@ body[data-vue="accueil"] #recherche-compteur { display: none; }
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 40px rgba(0, 0, 0, .35);
 }
-@media (min-width: 620px) {
-  .feuille-corps {
-    left: 50%; right: auto; bottom: auto; top: 50%;
-    width: 34rem;
-    transform: translate(-50%, -50%);
-    border-radius: 18px;
-    border: 1px solid var(--border);
-  }
+html[data-gabarit="ordi"] .feuille-corps {
+  left: 50%; right: auto; bottom: auto; top: 50%;
+  width: 34rem;
+  max-width: calc(100% - 32px);
+  transform: translate(-50%, -50%);
+  border-radius: 18px;
+  border: 1px solid var(--border);
 }
 
 .feuille-titre { margin: 0; font-size: 19px; font-weight: 700; }
@@ -382,7 +383,7 @@ mark.surlignage.actif {
   z-index: 50;
   top: 0; left: 0; bottom: 0;
   width: 284px;
-  max-width: 82vw;
+  max-width: calc(82 * var(--vw));
   display: flex;
   flex-direction: column;
   padding: max(10px, env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
@@ -472,8 +473,8 @@ main {
 /* de la place sous le texte : la poignee de selection doit toujours avoir
    du terrain selectionnable sous elle, meme en fin de document */
 #doc, #source {
-  min-height: calc(100vh - 220px);
-  padding-bottom: 20vh;
+  min-height: calc(100 * var(--vh) - 220px);
+  padding-bottom: calc(20 * var(--vh));
 }
 
 .format-entete {
@@ -546,7 +547,7 @@ main {
   display: block;
   width: 100%;
   height: auto;
-  margin-bottom: 20vh;
+  margin-bottom: calc(20 * var(--vh));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #fff;
@@ -625,16 +626,26 @@ main {
   text-align: center;
 }
 
-/* ----- ecrans larges : le menu reste affiche ----- */
-@media (min-width: 900px) {
-  .menu, body[data-menu="ouvert"] .menu { transform: none; box-shadow: none; }
-  .voile { display: none !important; }
-  body { padding-left: 284px; }
-  body[data-vue="accueil"] #btn-menu { display: none; }
+/* ----- affichage « ordinateur » : le menu reste affiche -----
+   (choisi par gabarit.js, selon l'appareil ou le reglage ⋮ → Affichage) */
+html[data-gabarit="ordi"] { --largeur-menu: min(284px, calc(45 * var(--vw))); }
+html[data-gabarit="ordi"] .menu,
+html[data-gabarit="ordi"] body[data-menu="ouvert"] .menu {
+  width: var(--largeur-menu);
+  transform: none;
+  box-shadow: none;
+}
+html[data-gabarit="ordi"] .voile { display: none !important; }
+html[data-gabarit="ordi"] body { padding-left: var(--largeur-menu); }
+html[data-gabarit="ordi"] body[data-vue="accueil"] #btn-menu { display: none; }
+/* la bulle de notification se centre sur la zone de lecture, pas sous le menu */
+html[data-gabarit="ordi"] .toast {
+  left: calc(50% + var(--largeur-menu) / 2);
+  max-width: min(calc(100% - var(--largeur-menu) - 24px), 30rem);
 }
 
 /* ----- pages de PDF, affichees telles quelles ----- */
-.pages-pdf { padding-bottom: 20vh; }
+.pages-pdf { padding-bottom: calc(20 * var(--vh)); }
 
 .page-pdf {
   position: relative;
@@ -833,7 +844,7 @@ body.selection-en-cours .toast { display: none !important; }
   left: 50%;
   bottom: calc(22px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  max-width: min(92vw, 30rem);
+  max-width: min(calc(92 * var(--vw)), 30rem);
   padding: 11px 16px;
   border-radius: 999px;
   background: var(--text);

@@ -2124,6 +2124,31 @@
     toast(NOMS[theme]);
   });
 
+  // Affichage telephone / ordinateur : la mise en page elle-meme est
+  // choisie par gabarit.js, charge avant la page.
+  var AFFICHAGES = ['auto', 'tel', 'ordi'];
+  var NOMS_AFFICHAGE = {
+    auto: 'Affichage : automatique',
+    tel:  'Affichage : téléphone',
+    ordi: 'Affichage : ordinateur'
+  };
+  var gabarit = window.AppArqAffichage;
+  function majEtiquetteAffichage() {
+    $('#etiquette-affichage').textContent = NOMS_AFFICHAGE[gabarit ? gabarit.choix() : 'auto'];
+  }
+  if (gabarit) {
+    majEtiquetteAffichage();
+    $('#btn-affichage').addEventListener('click', function () {
+      var suivant = AFFICHAGES[(AFFICHAGES.indexOf(gabarit.choix()) + 1) % AFFICHAGES.length];
+      gabarit.changer(suivant);
+      if (document.body.dataset.menu === 'ouvert') fermerMenu();
+      majEtiquetteAffichage();
+      toast(NOMS_AFFICHAGE[suivant]);
+    });
+  } else {
+    $('#btn-affichage').hidden = true;
+  }
+
   // La hauteur du document est mesuree quand elle change, pas a chaque
   // defilement : la relire en boucle forcait un recalcul de mise en page a
   // chaque image, ce qui rendait le defilement pateux pendant une selection.

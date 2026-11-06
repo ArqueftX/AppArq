@@ -5,7 +5,7 @@
    Apres une modification des fichiers, incremente VERSION.
    --------------------------------------------------------------- */
 
-var VERSION = 'v26';
+var VERSION = 'v27';
 var CACHE_APP     = 'apparq-app-' + VERSION;
 var CACHE_PARTAGE = 'apparq-partage';
 // Les grosses bibliotheques chargees a la demande (pdf.js) sont gardees a part :
@@ -17,6 +17,7 @@ var FICHIERS = [
   './index.html',
   './style.css',
   './app.js',
+  './gabarit.js',
   './manifest.webmanifest',
   './vendor/marked.umd.js',
   './vendor/purify.min.js',
